@@ -10,6 +10,8 @@ int main()
 {
    int shadow_fd;
 
+   shadow_fd = open("/dev/shadow_lbr", O_RDWR);
+ 
    if(shadow_fd < 0)
    {
        printf("Error opening shadow lbr interface\n");
