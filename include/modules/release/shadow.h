@@ -2,9 +2,21 @@
 #define __SHADOW_H__
 
 #ifdef __KERNEL__
+
 #include <linux/ioctl.h>
+#include <linux/spinlock.h>
+#include <linux/spinlock_types.h>
+
+struct lbr_stats {
+   uint64_t n_hits;
+   uint64_t n_misses;
+   spinlock_t lock;
+};
+
 #else
+
 #include <sys/ioctl.h>
+
 #endif
 
 #define SHADOW_IOC_MAGIC 'l'

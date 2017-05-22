@@ -7,7 +7,8 @@ include $(ROOT)/Makefile.inc
 
 
 MODULE = shadow-module
-OBJS = shadow.o
+OBJS = shadow.o  \
+	   lbr.o 
 
 
 MODULE_NAME=$(MODULE).ko

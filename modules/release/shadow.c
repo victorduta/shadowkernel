@@ -9,6 +9,7 @@
 
 #include "shadow.h"
 #include "wrapper.h"
+#include "lbr-state.h"
 
 MODULE_AUTHOR("Duta Victor Marin");
 MODULE_DESCRIPTION("Release Shadow LBR Module");
@@ -28,6 +29,14 @@ static int shadow_users = 0;
 static int shadow_initialized = 0;
 
 
+void get_lbr_stats(void *info) {
+    unsigned long flags;
+    struct lbr_stats *stats=(struct lbr_stats *)(info);
+    spin_lock_irqsave(&stats->lock, flags);
+    stats->n_hits += n_hits;
+    stats->n_misses += n_misses;
+    spin_unlock_irqrestore(&stats->lock, flags);
+}
 
 /*****************************************************************************
  * MODULE INTERFACE
@@ -55,11 +64,21 @@ int shadow_close(struct inode *inode, struct file *filp) {
 
 static long shadow_ioctl(struct file *file, unsigned int cmd, unsigned long arg1) {
     unsigned long flags;
-
+    int wait = 1;
+    struct lbr_stats stats;
     switch(cmd)
     {
 	case SHADOW_IOC_TEST:
-                           printk(KERN_INFO "Shadow LBR ioctl system works\n");
+                           
+                           stats.n_misses = 0;
+                           stats.n_hits = 0;
+                           spin_lock_init(&stats.lock);
+                           on_each_cpu(get_lbr_stats, &stats, wait);
+
+                           printk(KERN_INFO "Shadow LBR ioctl lbr stats\n");
+                           printk(KERN_INFO "N_HITS:%lld\n", stats.n_hits);
+                           printk(KERN_INFO "N_MISSES:%lld\n", stats.n_misses);
+
                            break;
     }
     return 0;
@@ -88,6 +107,7 @@ static struct miscdevice shadow_miscdev = {
 
 static int __init shadow_lbr_init(void) {
     unsigned long flags;
+    int wait = 1;
 
     if (misc_register(&shadow_miscdev))
     {
@@ -97,6 +117,9 @@ static int __init shadow_lbr_init(void) {
    
     printk(KERN_INFO"registered miscdev on minor=%d\n", shadow_miscdev.minor);
 
+    /* Enable lbr on each cpu */
+    //on_each_cpu(enable_lbr, NULL, wait);
+
 
     printk(KERN_INFO"Shadow module initialized\n");
 
@@ -104,9 +127,13 @@ static int __init shadow_lbr_init(void) {
 }
 static void __exit shadow_lbr_exit(void) {
     unsigned long flags;
+    int wait = 1;
 
+    /* Disable lbr on each cpu */
+    //on_each_cpu(disable_lbr, NULL, wait);
 
     misc_deregister(&shadow_miscdev);
+
    
     printk(KERN_INFO"Shadow module removed\n");
 }
