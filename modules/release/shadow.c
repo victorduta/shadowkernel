@@ -7,6 +7,8 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 
+#include "shadow.h"
+#include "wrapper.h"
 
 MODULE_AUTHOR("Duta Victor Marin");
 MODULE_DESCRIPTION("Release Shadow LBR Module");
@@ -56,7 +58,9 @@ static long shadow_ioctl(struct file *file, unsigned int cmd, unsigned long arg1
 
     switch(cmd)
     {
-	default: break;
+	case SHADOW_IOC_TEST:
+                           printk(KERN_INFO "Shadow LBR ioctl system works\n");
+                           break;
     }
     return 0;
 
@@ -87,7 +91,7 @@ static int __init shadow_lbr_init(void) {
 
     if (misc_register(&shadow_miscdev))
     {
-       printk(KERN_ERR "cannot register miscdev on minor=%d\n", 10);
+       printk(KERN_ERR "cannot register miscdev on minor=%d\n", SHADOW_MINOR);
        return -1;
     }
    
