@@ -1,17 +1,14 @@
 
 #include "wrapper.h"
 
-DEFINE_PER_CPU(int, n_hits) = 0;
+DEFINE_PER_CPU(uint64_t, n_hits) = 0;
 
-EXPORT_PER_CPU_SYMBOL_GPL(n_hits);
+EXPORT_PER_CPU_SYMBOL(n_hits);
 
-void increment_nhits()
-{
-   int *p_hits = &get_cpu_var(n_hits);
-    (*p_hits)++;
-   put_cpu_var(n_hits);
-}
+DEFINE_PER_CPU(uint64_t, n_misses) = 0;
 
-EXPORT_SYMBOL(increment_nhits);
+EXPORT_PER_CPU_SYMBOL(n_misses);
+
+
 
 

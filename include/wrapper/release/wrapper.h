@@ -3,14 +3,19 @@
 
 #include "lbr.h"
 
-void increment_nhits(void);
-
 struct lbr_entry{
   unsigned long long tos;
   unsigned long long from;
 };
 
 #define MAX_OFFSET 8
+
+
+#if !defined(SKIP_INSTRUMENTATION) && !defined(SKIP_SCRIPT_INSTRUMENTATION)
+DECLARE_PER_CPU(uint64_t, n_hits);
+DECLARE_PER_CPU(uint64_t, n_misses);
+#endif
+	
 
 #endif
 

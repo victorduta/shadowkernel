@@ -1,5 +1,5 @@
 #!/bin/bash
-export KERNEL_VERSION=4.4.17+
+export KERNEL_VERSION=4.4.17
 export HEADERS_VERSION=4.4.0-71
 export KERNEL_DIR=/boot
 export KERNEL_VMLINUX=vmlinuz-$KERNEL_VERSION

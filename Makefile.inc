@@ -9,6 +9,7 @@ BUILD_LLVM_TINY=build_llvm_tiny
 HAVE_GOLD=no_have_gold
 # debug or release
 KERNEL_BUILD_TYPE=release
+KERNEL_VERSION=4.4.17
 
 
 
@@ -30,6 +31,7 @@ INCLUDE_TOP_DIR=${PREFIX}/include
 INCLUDE_PASS_DIR=${INCLUDE_TOP_DIR}/passes
 INCLUDE_WRAPPER_DIR=${INCLUDE_TOP_DIR}/wrapper
 INCLUDE_COMMON_DIR=${INCLUDE_TOP_DIR}/common
+INCLUDE_MODULE_DIR=${INCLUDE_TOP_DIR}/modules
 
 INSTALL_TOP_DIR=${PREFIX}/install
 INSTALL_PASS_DIR=${INSTALL_TOP_DIR}/passes
@@ -43,10 +45,10 @@ VERBOSE=V=1
 
 
 ##################################################################################################
-# Pass related configuration (Default)
+# Clang related configuration (Default)
 #
 LLVM_SOURCE=${PREFIX}/tools
-LLVM_MODULES=${PREFIX}/lkm
+LLVM_MODULES=${PREFIX}/modules
 LLVM_PASSES=${PREFIX}/passes
 
 LLVMPREFIX=${LLVM_SOURCE}/bin
