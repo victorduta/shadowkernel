@@ -27,15 +27,19 @@ MODULE_LICENSE("GPL");
 
 static int shadow_users = 0;
 static int shadow_initialized = 0;
-
+static struct lbr_stats stats;
 
 void get_lbr_stats(void *info) {
     unsigned long flags;
     struct lbr_stats *stats=(struct lbr_stats *)(info);
-    spin_lock_irqsave(&stats->lock, flags);
-    stats->n_hits += n_hits;
-    stats->n_misses += n_misses;
-    spin_unlock_irqrestore(&stats->lock, flags);
+    spin_lock_irqsave(&(stats->lock), flags);
+    
+    stats->n_hits += get_cpu_var(n_hits);
+    put_cpu_var(n_hits);
+    stats->n_misses += get_cpu_var(n_misses);
+    put_cpu_var(n_misses);
+
+    spin_unlock_irqrestore(&(stats->lock), flags);
 }
 
 /*****************************************************************************
@@ -65,14 +69,13 @@ int shadow_close(struct inode *inode, struct file *filp) {
 static long shadow_ioctl(struct file *file, unsigned int cmd, unsigned long arg1) {
     unsigned long flags;
     int wait = 1;
-    struct lbr_stats stats;
     switch(cmd)
     {
 	case SHADOW_IOC_TEST:
                            
                            stats.n_misses = 0;
                            stats.n_hits = 0;
-                           spin_lock_init(&stats.lock);
+                           spin_lock_init(&(stats.lock));
                            on_each_cpu(get_lbr_stats, &stats, wait);
 
                            printk(KERN_INFO "Shadow LBR ioctl lbr stats\n");
