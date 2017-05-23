@@ -28,9 +28,8 @@ void lbr_epilogue(void *frame)
    rdmsrl(MSR_LBR_TOS,  lbr.tos);
    rdmsrl(MSR_LBR_NHM_FROM + lbr.tos, lbr.from);
    preempt_enable();
-
-   lbr.from += MAX_OFFSET;
-   if( *address_slot > lbr.from)
+   lbr.from = LBR_FROM(lbr.from);
+   if( (*address_slot < lbr.from) || (*address_slot > (lbr.from+MAX_OFFSET)))
    {
 #ifndef SKIP_SCRIPT_INSTRUMENTATION
         get_cpu_var(n_misses)++;
@@ -44,7 +43,7 @@ void lbr_epilogue(void *frame)
         get_cpu_var(n_hits)++;
         put_cpu_var(n_hits);
 #endif
-       *address_slot = lbr.from;
+       *address_slot = lbr.from+MAX_OFFSET;
    }
 #endif
 }

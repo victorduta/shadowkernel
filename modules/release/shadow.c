@@ -111,6 +111,7 @@ static struct miscdevice shadow_miscdev = {
 static int __init shadow_lbr_init(void) {
     unsigned long flags;
     int wait = 1;
+    struct lbr_t lbr;
 
     if (misc_register(&shadow_miscdev))
     {
@@ -121,7 +122,12 @@ static int __init shadow_lbr_init(void) {
     printk(KERN_INFO"registered miscdev on minor=%d\n", shadow_miscdev.minor);
 
     /* Enable lbr on each cpu */
-    //on_each_cpu(enable_lbr, NULL, wait);
+    on_each_cpu(enable_lbr, NULL, wait);
+    
+    get_cpu();
+    get_lbr(&lbr);
+    dump_lbr(&lbr);
+    put_cpu();
 
 
     printk(KERN_INFO"Shadow module initialized\n");
@@ -133,7 +139,7 @@ static void __exit shadow_lbr_exit(void) {
     int wait = 1;
 
     /* Disable lbr on each cpu */
-    //on_each_cpu(disable_lbr, NULL, wait);
+    on_each_cpu(disable_lbr, NULL, wait);
 
     misc_deregister(&shadow_miscdev);
 
