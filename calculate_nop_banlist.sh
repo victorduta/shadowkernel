@@ -10,6 +10,12 @@ PARSE=$(cat result.find| grep 0xff|  sed 's/0x//g') # grep first, we cannot find
 rm result.find
 for TOKEN in $PARSE; do
   TOKEN_STRING=$(awk '$1 ~ /^'"$TOKEN"'$/{print $3}' $QEMU_DIR/$KERNEL_MAP)
-  CALL_WRAPPER=$(./strip_all_calls.sh ${TOKEN_STRING} | grep 0xffffffff810002c0) #this might change on compilation
-  [[ !  -z  $CALL_WRAPPER  ]] && echo "\""${TOKEN_STRING}"\","
+  LAST_TOKEN=""
+  for INDEPENDENT_TOKEN in ${TOKEN_STRING}; do
+      LAST_TOKEN=${INDEPENDENT_TOKEN}
+  done
+  CALL_WRAPPER=$(./strip_entire_function.sh ${LAST_TOKEN}| grep "add    %gs:0xa108,%rax" ) #this might change on compilation | grep "add    %gs:0xa108,%rax"
+  for INDEPENDENT_TOKEN in ${TOKEN_STRING}; do
+      [[ !  -z  $CALL_WRAPPER  ]] &&  echo "\""${INDEPENDENT_TOKEN}"\","
+  done
 done
