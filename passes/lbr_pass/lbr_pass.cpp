@@ -133,9 +133,9 @@ bool LbrPass::runOnFunction(Function &F)
     {
   	  if(F.getName().compare(*it) == 0)
   	  {
-#ifdef LBR_DEBUG_INFO
+//#ifdef LBR_DEBUG_INFO
   		  errs() << "runOnFunction:Skip function " << *it << "!\n";
-#endif
+//#endif
   		  return false;
   	  }
     }

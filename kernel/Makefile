@@ -4,7 +4,9 @@ ROOT=..
 include $(ROOT)/Makefile.inc
 
 
-DIR=llvmLinux
+DIRS=llvmLinux baseKernel
+TARGETS= config build_kernel build_modules install_modules install_image install
+CONFIG_TARGETS= clean_kernel clean def_config dbg_config
 WD=$(PWD)
 
 ifeq ($(KERNEL_BUILD_TYPE),debug)
@@ -17,59 +19,101 @@ endif
 
 IFLAGS=-I$(INCLUDE_WRAPPER_DIR)/$(KERNEL_BUILD_TYPE) -I$(INCLUDE_COMMON_DIR)
 
-
-KCFLAGS=-fpad-calls -include epilogue.h -Xclang -load -Xclang $(INSTALL_PASS_DIR)/lbr_pass.so $(DFLAGS) $(IFLAGS)
-KCFLAGS_MODULES=$(KCFLAGS)
-KCFLAGS_MODULES+=-DSKIP_SCRIPT_INSTRUMENTATION
 KCFLAGS_EXTRA=-DSKIP_INSTRUMENTATION
 KCFLAGS_SCRIPTS=-DSKIP_SCRIPT_INSTRUMENTATION
 CORES=-j8
 
-PER_FILE_FLAGS += CFLAGS_devicetable-offsets.o+="$(KCFLAGS_SCRIPTS)" 
-PER_FILE_FLAGS += CFLAGS_vclock_gettime.o+="$(KCFLAGS_EXTRA)"
-PER_FILE_FLAGS += CFLAGS_empty.o+="$(KCFLAGS_SCRIPTS)"
-PER_FILE_FLAGS += CFLAGS_bounds.o+="$(KCFLAGS_SCRIPTS)"
-
-REDIRECT_BUILD_KERNEL= 1> kernel_dump 2> kernel_dump
-REDIRECT_BUILD_MODULES= 1> kernel_module_dump 2> kernel_module_dump
-REDIRECT_INSTALL_IMAGE= 1> kernel_install_dump 2> kernel_install_dump
-REDIRECT_INSTALL_MODULES= 1> kernel_module_install_dump 2> kernel_module_install_dump
 
 
-KERNEL_CONFIG_EXTRA=dbg_config
+llvmLinux_KCFLAGS=-fpad-calls -include epilogue.h -Xclang -load -Xclang $(INSTALL_PASS_DIR)/lbr_pass.so $(DFLAGS) $(IFLAGS)
+llvmLinux_KCFLAGS_MODULES=$(KCFLAGS)
+llvmLinux_KCFLAGS_MODULES+=-DSKIP_SCRIPT_INSTRUMENTATION
 
-TARGETS= config build_kernel build_modules install_modules install_image install
 
-all: $(TARGETS)
+llvmLinux_PER_FILE_FLAGS += CFLAGS_devicetable-offsets.o+="$(KCFLAGS_SCRIPTS)" 
+llvmLinux_PER_FILE_FLAGS += CFLAGS_vclock_gettime.o+="$(KCFLAGS_EXTRA)"
+llvmLinux_PER_FILE_FLAGS += CFLAGS_empty.o+="$(KCFLAGS_SCRIPTS)"
+llvmLinux_PER_FILE_FLAGS += CFLAGS_bounds.o+="$(KCFLAGS_SCRIPTS)"
 
-install:
+llvmLinux_REDIRECT_BUILD_KERNEL= 1> kernel_dump 2> kernel_dump
+llvmLinux_REDIRECT_BUILD_MODULES= 1> kernel_module_dump 2> kernel_module_dump
+llvmLinux_REDIRECT_INSTALL_IMAGE= 1> kernel_install_dump 2> kernel_install_dump
+llvmLinux_REDIRECT_INSTALL_MODULES= 1> kernel_module_install_dump 2> kernel_module_install_dump
+
+baseKernel_REDIRECT_BUILD_KERNEL= 1> base_kernel_dump 2> base_kernel_dump
+baseKernel_REDIRECT_BUILD_MODULES= 1> base_kernel_module_dump 2> base_kernel_module_dump
+baseKernel_REDIRECT_INSTALL_IMAGE= 1> base_kernel_install_dump 2> base_kernel_install_dump
+baseKernel_REDIRECT_INSTALL_MODULES= 1> base_kernel_module_install_dump 2> base_kernel_module_install_dump
+
+
+
+all: $(patsubst %,all_%,$(DIRS))
+
+all_baseKernel: $(patsubst %,%_baseKernel,$(TARGETS))
+
+all_llvmLinux: $(patsubst %,%_llvmLinux,$(TARGETS))
+
+install_llvmLinux:
 	cd $(ROOT); ./copy_kernel.sh; cd $(WD)
+install_baseKernel:
+	true
 
-install_image:
+
+$(patsubst %,install_image_%,$(DIRS)): DIR = $(subst install_image_,,$@)
+$(patsubst %,install_image_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS_MODULES)
+$(patsubst %,install_image_%,$(DIRS)): REDIRECT_INSTALL_IMAGE = $($(DIR)_REDIRECT_INSTALL_IMAGE)
+$(patsubst %,install_image_%,$(DIRS)):
 	sudo $(MAKE) -C $(DIR) install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_INSTALL_IMAGE)
 
-install_modules:
+$(patsubst %,install_modules_%,$(DIRS)): DIR = $(subst install_modules_,,$@)
+$(patsubst %,install_modules_%,$(DIRS)): KCFLAGS_MODULES = $($(DIR)_KCFLAGS_MODULES)
+$(patsubst %,install_modules_%,$(DIRS)): REDIRECT_INSTALL_MODULES = $($(DIR)_REDIRECT_INSTALL_MODULES)
+$(patsubst %,install_modules_%,$(DIRS)):
 	sudo $(MAKE) -C $(DIR) modules_install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS_MODULES)" $(CORES) $(VERBOSE)  $(REDIRECT_INSTALL_MODULES)
 
-build_modules:
+$(patsubst %,build_modules_%,$(DIRS)): DIR = $(subst build_modules_,,$@)
+$(patsubst %,build_modules_%,$(DIRS)): KCFLAGS_MODULES = $($(DIR)_KCFLAGS_MODULES)
+$(patsubst %,build_modules_%,$(DIRS)): REDIRECT_BUILD_MODULES = $($(DIR)_REDIRECT_BUILD_MODULES)
+$(patsubst %,build_modules_%,$(DIRS)):
 	$(MAKE) -C $(DIR) modules CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS_MODULES)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_MODULES)
 
-build_kernel:
-	$(MAKE) -C $(DIR) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold ${PER_FILE_FLAGS}  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
+$(patsubst %,build_kernel_%,$(DIRS)): DIR = $(subst build_kernel_,,$@)
+$(patsubst %,build_kernel_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS)
+$(patsubst %,build_kernel_%,$(DIRS)): PER_FILE_FLAGS = $($(DIR)_PER_FILE_FLAGS)
+$(patsubst %,build_kernel_%,$(DIRS)): REDIRECT_BUILD_KERNEL = $($(DIR)_REDIRECT_BUILD_KERNEL)
+$(patsubst %,build_kernel_%,$(DIRS)):
+	$(MAKE) -C $(DIR) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold $(PER_FILE_FLAGS)  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
 
-config: def_config $(KERNEL_CONFIG_EXTRA)
 
-def_config: clean
+
+config_baseKernel: $(patsubst %,%_baseKernel,$(CONFIG_TARGETS))
+
+config_llvmLinux: $(patsubst %,%_llvmLinux,$(CONFIG_TARGETS))
+
+
+dbg_config_llvmLinux:
+	cd llvmLinux; ./scripts/kconfig/merge_config.sh .config .config-fragment; cd ..
+
+dbg_config_baseKernel:
+	true
+
+$(patsubst %,def_config_%,$(DIRS)): DIR = $(subst def_config_,,$@)
+$(patsubst %,def_config_%,$(DIRS)):
 	$(MAKE) -C $(DIR) x86_64_defconfig CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold 
 	$(MAKE) -C $(DIR) kvmconfig CC=$(CXX) HOSTCC=$(CXX) AS=$(AS)  LD=ld.gold 
+	
 
-dbg_config:
-	cd $(DIR); ./scripts/kconfig/merge_config.sh .config .config-fragment; cd ..
-
-clean: clean_kernel
+$(patsubst %,clean_%,$(DIRS)): DIR = $(subst clean_,,$@)
+$(patsubst %,clean_%,$(DIRS)):
 	$(MAKE) -C $(DIR) mrproper
 
-clean_kernel:
-	cd $(ROOT);./clean_kernel.sh; cd $(WD)
+$(patsubst %,clean_kernel_%,$(DIRS)): DIR = $(subst clean_kernel_,,$@)
+$(patsubst %,clean_kernel_%,$(DIRS)):
+	cd $(ROOT);./clean_kernel.sh ${DIR}; cd $(WD)
+
+clean_dump:
+	rm -f kernel_*
+	rm -f base_kernel_*
+
 
 
