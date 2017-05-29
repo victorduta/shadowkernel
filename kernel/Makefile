@@ -26,7 +26,7 @@ CORES=-j8
 
 
 llvmLinux_KCFLAGS=-fpad-calls -include epilogue.h -Xclang -load -Xclang $(INSTALL_PASS_DIR)/lbr_pass.so $(DFLAGS) $(IFLAGS)
-llvmLinux_KCFLAGS_MODULES=$(KCFLAGS)
+llvmLinux_KCFLAGS_MODULES=$(llvmLinux_KCFLAGS)
 llvmLinux_KCFLAGS_MODULES+=-DSKIP_SCRIPT_INSTRUMENTATION
 
 
@@ -60,7 +60,7 @@ install_baseKernel:
 
 
 $(patsubst %,install_image_%,$(DIRS)): DIR = $(subst install_image_,,$@)
-$(patsubst %,install_image_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS_MODULES)
+$(patsubst %,install_image_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS)
 $(patsubst %,install_image_%,$(DIRS)): REDIRECT_INSTALL_IMAGE = $($(DIR)_REDIRECT_INSTALL_IMAGE)
 $(patsubst %,install_image_%,$(DIRS)):
 	sudo $(MAKE) -C $(DIR) install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_INSTALL_IMAGE)
