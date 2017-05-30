@@ -18,7 +18,7 @@ DFLAGS=-DLBR_RELEASE
 endif
 
 ifeq ($(NOP_PAD_KERNEL),True)
-llvmLinux_KCFLAGS+=-DNOP_PADDING
+llvmLinux_KAFLAGS+=-DNOP_PADDING
 llvmLinux_KCFLAGS+=-fpad-calls
 endif
 
@@ -92,10 +92,11 @@ $(patsubst %,build_modules_%,$(DIRS)):
 
 $(patsubst %,build_kernel_%,$(DIRS)): DIR = $(subst build_kernel_,,$@)
 $(patsubst %,build_kernel_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS)
+$(patsubst %,build_kernel_%,$(DIRS)): KAFLAGS = $($(DIR)_KAFLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): PER_FILE_FLAGS = $($(DIR)_PER_FILE_FLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): REDIRECT_BUILD_KERNEL = $($(DIR)_REDIRECT_BUILD_KERNEL)
 $(patsubst %,build_kernel_%,$(DIRS)):
-	$(MAKE) -C $(DIR) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold $(PER_FILE_FLAGS)  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
+	$(MAKE) -C $(DIR) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold $(PER_FILE_FLAGS)  KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
 
 
 

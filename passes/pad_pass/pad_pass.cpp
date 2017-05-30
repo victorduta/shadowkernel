@@ -369,11 +369,11 @@ bool PadCallInstructionImpl::runOnMachineFunction(MachineFunction &MF) {
 	  vector<MachineInstr *> call_vector;
 	  getCallInstructionList(MF, call_vector);
 	  //printCallInstructionList(MF, call_vector);
-/*
-	  errs() << MF.getName() << " ==================\n";
-	  MF.print(errs());
-	  errs() << MF.getName() << " ==================\n";
-*/
+
+	  //errs() << MF.getName() << " ==================\n";
+	  //MF.print(errs());
+	  //errs() << MF.getName() << " ==================\n";
+
 	  return false;
   }
 
