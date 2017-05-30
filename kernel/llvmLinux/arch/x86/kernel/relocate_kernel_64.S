@@ -173,12 +173,14 @@ identity_mapped:
 	popq	%rdx
 	leaq	PAGE_SIZE(%r10), %rsp
 	call	*%rdx
+#ifdef  NOP_PADDING
 	nop
 	nop
 	nop
 	nop
 	nop
 	nop
+#endif
 
 	/* get the re-entry point of the peer system */
 	movq	0(%rsp), %rbp

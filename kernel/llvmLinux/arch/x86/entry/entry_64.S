@@ -183,7 +183,9 @@ entry_SYSCALL_64_fastpath:
 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
 	movq	%r10, %rcx
 	call	*sys_call_table(, %rax, 8)
+#ifdef  NOP_PADDING
 	nop
+#endif
 	movq	%rax, RAX(%rsp)
 1:
 /*
@@ -268,7 +270,9 @@ tracesys_phase2:
 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
 	movq	%r10, %rcx			/* fixup for C */
 	call	*sys_call_table(, %rax, 8)
+#ifdef  NOP_PADDING
 	nop
+#endif
 	movq	%rax, RAX(%rsp)
 1:
 	/* Use IRET because user could have changed pt_regs->foo */
@@ -468,12 +472,14 @@ ENTRY(ret_from_fork)
 	 */
 	movq	%rbp, %rdi
 	call	*%rbx
+#ifdef  NOP_PADDING
 	nop
 	nop
 	nop
 	nop
 	nop
 	nop
+#endif
 	movl	$0, RAX(%rsp)
 	RESTORE_EXTRA_REGS
 	jmp	int_ret_from_sys_call

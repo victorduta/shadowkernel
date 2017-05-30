@@ -6,7 +6,7 @@ include $(ROOT)/Makefile.inc
 
 DIRS=llvmLinux baseKernel
 TARGETS= config build_kernel build_modules install_modules install_image install
-CONFIG_TARGETS= clean_kernel clean def_config dbg_config
+CONFIG_TARGETS= clean_kernel clean def_config
 WD=$(PWD)
 
 ifeq ($(KERNEL_BUILD_TYPE),debug)
@@ -17,6 +17,19 @@ ifeq ($(KERNEL_BUILD_TYPE),release)
 DFLAGS=-DLBR_RELEASE
 endif
 
+ifeq ($(NOP_PAD_KERNEL),True)
+llvmLinux_KCFLAGS+=-DNOP_PADDING
+llvmLinux_KCFLAGS+=-fpad-calls
+endif
+
+ifeq ($(LBR_INSTRUMENT_KERNEL),True)
+llvmLinux_KCFLAGS+=-include epilogue.h -Xclang -load -Xclang $(INSTALL_PASS_DIR)/lbr_pass.so
+endif
+
+ifeq ($(ADD_DEBUG_KERNEL),True)
+CONFIG_TARGETS+=dbg_config
+endif
+
 IFLAGS=-I$(INCLUDE_WRAPPER_DIR)/$(KERNEL_BUILD_TYPE) -I$(INCLUDE_COMMON_DIR)
 
 KCFLAGS_EXTRA=-DSKIP_INSTRUMENTATION
@@ -25,7 +38,7 @@ CORES=-j8
 
 
 
-llvmLinux_KCFLAGS=-fpad-calls -include epilogue.h -Xclang -load -Xclang $(INSTALL_PASS_DIR)/lbr_pass.so $(DFLAGS) $(IFLAGS)
+llvmLinux_KCFLAGS+= $(DFLAGS) $(IFLAGS)
 llvmLinux_KCFLAGS_MODULES=$(llvmLinux_KCFLAGS)
 llvmLinux_KCFLAGS_MODULES+=-DSKIP_SCRIPT_INSTRUMENTATION
 
@@ -60,7 +73,7 @@ install_baseKernel:
 
 
 $(patsubst %,install_image_%,$(DIRS)): DIR = $(subst install_image_,,$@)
-$(patsubst %,install_image_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS)
+$(patsubst %,install_image_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS_MODULES)
 $(patsubst %,install_image_%,$(DIRS)): REDIRECT_INSTALL_IMAGE = $($(DIR)_REDIRECT_INSTALL_IMAGE)
 $(patsubst %,install_image_%,$(DIRS)):
 	sudo $(MAKE) -C $(DIR) install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_INSTALL_IMAGE)

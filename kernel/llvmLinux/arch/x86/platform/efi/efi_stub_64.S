@@ -85,12 +85,14 @@ ENTRY(efi_call)
 	mov %rsi, %rcx
 	SWITCH_PGT
 	call *%rdi
+#ifdef  NOP_PADDING
 	nop
 	nop
 	nop
 	nop
 	nop
 	nop
+#endif
 	RESTORE_PGT
 	addq $48, %rsp
 	RESTORE_XMM

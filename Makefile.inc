@@ -7,17 +7,23 @@ HAVE_LLVM=1
 
 BUILD_LLVM_TINY=build_llvm_tiny
 HAVE_GOLD=no_have_gold
-# debug or release
+
+# Defines used by module and pass build system
+# KERNEL_BUILD_TYPE = debug/release
 KERNEL_BUILD_TYPE=release
 KERNEL_VERSION=4.4.17
 
+# Defines used by kernel build system
+
+NOP_PAD_KERNEL=True
+LBR_INSTRUMENT_KERNEL=False
+ADD_DEBUG_KERNEL=False
 
 
 #########################################
 # Top DIR of the project
 #########################################
 PREFIX=/home/victor/Disertation/Workplace
-
 
 
 #
