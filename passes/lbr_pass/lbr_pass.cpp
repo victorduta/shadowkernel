@@ -141,6 +141,20 @@ bool LbrPass::runOnFunction(Function &F)
   	  }
     }
 
+#ifdef CHECK_FOR_LOCAL_BUFFERS
+    if (!hasLocalBuffers(F))
+    {
+//#ifdef LBR_DEBUG_INFO
+    	errs() << "runOnFunction:Function " << F.getName() << " has no local buffers\n";
+//#endif
+    	return false;
+    }
+    else
+    {
+    	errs() << "runOnFunction:Function " << F.getName() << " has local buffers\n";
+    }
+#endif
+
     /* Get a list of return instructions and their coresponding
      * debug location
      */
@@ -292,6 +306,24 @@ void LbrPass::getEpilogue(Module *M)
 #endif
         isInstrumentable = false;
     }
+}
+
+bool LbrPass::hasLocalBuffers(Function &F)
+{
+	vector<instruction_t *> instruction_list;
+	getInstructionList<AllocaInst>(F, instruction_list);
+	for(vector<instruction_t *>::const_iterator it = instruction_list.begin(),
+	    		                    ie = instruction_list.end(); it != ie; ++it)
+	{
+		AllocaInst *alloca = static_cast<AllocaInst*>((*it)->inst);
+
+	    if (alloca->getAllocatedType()->isArrayTy())
+	    {
+	    	return true;
+	    }
+
+	}
+	return false;
 }
 
 void LbrPass::getPads(Module *M)

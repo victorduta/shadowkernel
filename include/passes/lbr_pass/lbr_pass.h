@@ -77,6 +77,7 @@ namespace llvm {
 	 void cleanModuleInstrumentation(Module &M);
 	 void getEpilogue(Module *M);
 	 void getPads(Module *M);
+	 bool hasLocalBuffers(Function &F);
 
 	 template<class T> void getInstructionList(Function &F, vector<instruction_t *>& instruction_vec);
 

@@ -13,6 +13,8 @@ HAVE_GOLD=no_have_gold
 KERNEL_BUILD_TYPE=release
 KERNEL_VERSION=4.4.17
 
+CHECK_FOR_LOCAL_BUFFERS=True
+
 # Defines used by kernel build system
 
 NOP_PAD_KERNEL=True

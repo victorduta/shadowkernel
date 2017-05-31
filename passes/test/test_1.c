@@ -191,33 +191,36 @@ void more_complex_tail_call_7(int x)
     }
    
 }
-
+extern int offset_test;
 void test_alloca_var()
 {
    int x;
    char c = 'a';
+   volatile int *p = (int *)&c;
+
+   p[0] = 45;
    printf("%c", c);
-   printf("%d",x);
+   printf("%d",*p);
 }
 extern unsigned int us;
 void test_alloca_array()
 {
-   unsigned int v[100];
+   unsigned int v[100][200];
    unsigned int mor;
-   v[2] = 0;
+   v[2][3] = 0;
    memset(v, 2, us);
 
    for (int i = 0 ; i < 23; i++)
    {
-      mor+= v[i];
+      mor+= v[i][2];
    }
    if (mor != us)
    {
        return;
    }
-   printf("%d", v[2]);
+   printf("%d", v[2][4]);
    
-   if (v[2] != 3)
+   if (v[2][5] != 3)
    {
       int mog[78];
       mog[4] = 7;

@@ -13,7 +13,7 @@ all: clean test_1.plain
 %.plain: %.c
 	$(CXX) -c -fno-optimize-sibling-calls -O2  -o  $@ $<
 %.ll: %.c
-	$(CXX) -S -c -emit-llvm -fno-optimize-sibling-calls -O2 -o  $@ $<
+	$(CXX) $(CFLAGS) -S -c -emit-llvm -fno-optimize-sibling-calls -O2 -o  $@ $<
 %.s: %.bc
 	$(LLC) -print-machineinstrs=dead-mi-elimination -o $@ $<
 	$(LLC) -help-hidden | grep isel

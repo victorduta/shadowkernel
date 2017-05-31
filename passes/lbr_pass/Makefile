@@ -16,6 +16,10 @@ ifeq ($(KERNEL_BUILD_TYPE),release)
 DFLAGS= -DLBR_RELEASE
 endif
 
+ifeq ($(CHECK_FOR_LOCAL_BUFFERS),True)
+DFLAGS+= -DCHECK_FOR_LOCAL_BUFFERS
+endif
+
 include ../Makefile.inc
 
 
