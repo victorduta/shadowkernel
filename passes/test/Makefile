@@ -11,8 +11,9 @@ all: clean test_1.plain
 %.o: %.c
 	$(CXX) $(CFLAGS) $(KERNELARGS) -fpad-calls -o $@ $<
 %.plain: %.c
-	$(CXX) -c -fno-optimize-sibling-calls -fpad-calls -O2  -o  $@ $<
-
+	$(CXX) -c -fno-optimize-sibling-calls -O2  -o  $@ $<
+%.ll: %.c
+	$(CXX) -S -c -emit-llvm -fno-optimize-sibling-calls -O2 -o  $@ $<
 %.s: %.bc
 	$(LLC) -print-machineinstrs=dead-mi-elimination -o $@ $<
 	$(LLC) -help-hidden | grep isel
@@ -24,5 +25,5 @@ help:
 	$(OPT) --help-hidden | grep debug
 
 clean:
-	rm -f *.bc *.o *.s *.plain
+	rm -f *.bc *.o *.s *.plain *.ll
 

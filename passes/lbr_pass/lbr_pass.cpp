@@ -98,6 +98,9 @@ bool LbrPass::runOnFunction(Function &F)
        }
     }
 
+
+    /* Add padding no matter if the module or function is blacklisted */
+#ifdef LBR_PADD_CALLS
     for(vector<string>::const_iterator fi= global_pads.begin(),
     		              fe = global_pads.end(); fi != fe; ++fi)
     {
@@ -110,8 +113,6 @@ bool LbrPass::runOnFunction(Function &F)
        }
     }
 
-    /* Add padding no matter if the module or function is blacklisted */
-#ifdef LBR_PADD_CALLS
     vector<instruction_t *> call_list;
     getInstructionList<CallInst>(F, call_list);
 
@@ -133,9 +134,9 @@ bool LbrPass::runOnFunction(Function &F)
     {
   	  if(F.getName().compare(*it) == 0)
   	  {
-//#ifdef LBR_DEBUG_INFO
+#ifdef LBR_DEBUG_INFO
   		  errs() << "runOnFunction:Skip function " << *it << "!\n";
-//#endif
+#endif
   		  return false;
   	  }
     }
@@ -193,11 +194,11 @@ bool LbrPass::runOnFunction(Function &F)
     }
 
 
-#ifdef LBR_DEBUG_INFO
+//#ifdef LBR_DEBUG_INFO
        errs() << "After instrumentation\n";
        F.print(errs());
        errs() << "========================\n";
-#endif
+//#endif
 
 	return true;
 }

@@ -24,13 +24,13 @@ void lbr_epilogue(void *frame)
    struct lbr_entry lbr;
 #ifndef SKIP_INSTRUMENTATION
    unsigned long long *address_slot = (unsigned long long*)((char *)frame+8);
-#ifdef BENCHMARK_RDMSR
+#ifdef INCLUDE_RDMSR
    preempt_disable(); 
    rdmsrl(MSR_LBR_TOS,  lbr.tos);
    rdmsrl(MSR_LBR_NHM_FROM + lbr.tos, lbr.from);
    preempt_enable();
 #endif
-#ifdef BENCHMARK_RA_REWRITE
+#ifdef INCLUDE_RA_REWRITE
    lbr.from = LBR_FROM(lbr.from);
    if( (*address_slot < lbr.from) || (*address_slot > (lbr.from+MAX_OFFSET)))
    {

@@ -16,8 +16,10 @@ KERNEL_VERSION=4.4.17
 # Defines used by kernel build system
 
 NOP_PAD_KERNEL=True
-LBR_INSTRUMENT_KERNEL=False
+LBR_INSTRUMENT_KERNEL=True
 ADD_DEBUG_KERNEL=False
+INCLUDE_RDMSR=True
+INCLUDE_RA_REWRITE=False
 
 
 #########################################

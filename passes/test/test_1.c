@@ -192,7 +192,38 @@ void more_complex_tail_call_7(int x)
    
 }
 
+void test_alloca_var()
+{
+   int x;
+   char c = 'a';
+   printf("%c", c);
+   printf("%d",x);
+}
+extern unsigned int us;
+void test_alloca_array()
+{
+   unsigned int v[100];
+   unsigned int mor;
+   v[2] = 0;
+   memset(v, 2, us);
 
+   for (int i = 0 ; i < 23; i++)
+   {
+      mor+= v[i];
+   }
+   if (mor != us)
+   {
+       return;
+   }
+   printf("%d", v[2]);
+   
+   if (v[2] != 3)
+   {
+      int mog[78];
+      mog[4] = 7;
+      printf("%d\n", mog[4]);
+   }
+}
 
 int (*foo)(int) = normal_function_s_complex;
 void (*mem[100])(int);
@@ -227,6 +258,9 @@ int main()
   more_complex_tail_call_6(7);
   more_complex_tail_call_7(8);
   we_call_tail_40();
+
+  test_alloca_var();
+  test_alloca_array();
 
   foo(5);
   //foos(6);
