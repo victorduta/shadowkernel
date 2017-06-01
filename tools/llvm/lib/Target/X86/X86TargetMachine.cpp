@@ -404,6 +404,6 @@ void X86PassConfig::addPreEmitPass() {
   }
   if (TM->mustPadCalls())
   {
-     addPass(createX86PadCallInstruction());
+     addPass(createX86DynamicMachinePass());
   }
 }

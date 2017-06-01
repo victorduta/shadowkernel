@@ -14,9 +14,9 @@ using namespace std;
 namespace llvm 
 {
 
-  class PadCallInstructionImpl : public PadCallInstruction {
+  class PadCallInstructionImpl : public DynamicMachinePass {
 public:
-    PadCallInstructionImpl() : PadCallInstruction()
+    PadCallInstructionImpl() : DynamicMachinePass()
                    , STI(nullptr), TII(nullptr) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -29,7 +29,7 @@ public:
     StringRef getPassName() const override {
       return "X86 pad call instructions till size(call)+nops == 8 ";
     }
-    FunctionPass* createX86PadCallInstruction() override; //Override virtual method from parent class
+    FunctionPass* createX86DynamicMachinePass() override; //Override virtual method from parent class
 
     const X86Subtarget *STI;
    	const TargetInstrInfo *TII;
@@ -377,15 +377,15 @@ bool PadCallInstructionImpl::runOnMachineFunction(MachineFunction &MF) {
 	  return false;
   }
 
-FunctionPass* PadCallInstructionImpl::createX86PadCallInstruction() {
+FunctionPass* PadCallInstructionImpl::createX86DynamicMachinePass() {
     return this;
   }
 
 
-extern "C" PadCallInstruction* create() {
+extern "C" DynamicMachinePass* create() {
     return new PadCallInstructionImpl();
  }
 
-extern "C" void destroy(PadCallInstruction* p) {
+extern "C" void destroy(DynamicMachinePass* p) {
    // delete p;
  }

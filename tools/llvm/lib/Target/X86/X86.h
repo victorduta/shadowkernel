@@ -50,9 +50,8 @@ FunctionPass *createX86IssueVZeroUpperPass();
 /// This will prevent a stall when returning on the Atom.
 FunctionPass *createX86PadShortFunctions();
 
-FunctionPass *createX86PadCallInstructions();
-
-FunctionPass* createX86PadCallInstruction();
+/// Hook this into llvm CodeGen pipeline
+FunctionPass *createX86DynamicMachinePass();
 
 /// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA

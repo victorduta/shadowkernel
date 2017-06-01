@@ -1,25 +1,25 @@
 #!/bin/bash
 
-PATH_TO_BACKUP=/home/victor/Disertation/Workplace/tools/llvm_parallel
+PATH_TO_BACKUP=/home/victor/Disertation/Workplace/tools/llvm
 # fixups are hardcoded for the moment X86PadCallInstruction.h
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86MCInstLower.cpp /home/victor/Disertation/Workplace/tools/llvm_parallel/lib/Target/X86/X86MCInstLower.cpp
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86AsmPrinter.cpp /home/victor/Disertation/Workplace/tools/llvm_parallel/lib/Target/X86/X86AsmPrinter.cpp
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86AsmPrinter.h /home/victor/Disertation/Workplace/tools/llvm_parallel/lib/Target/X86/X86AsmPrinter.h
-#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86PadCallInstruction.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86PadCallInstruction.h
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86MCInstLower.cpp /home/victor/Disertation/Workplace/tools/llvm_parallel/lib/Target/X86/X86MCInstLower.cpp
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86AsmPrinter.cpp /home/victor/Disertation/Workplace/tools/llvm_parallel/lib/Target/X86/X86AsmPrinter.cpp
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86AsmPrinter.h /home/victor/Disertation/Workplace/tools/llvm_parallel/lib/Target/X86/X86AsmPrinter.h
+
+#
 
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/dlclass.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/dlclass.cpp
 
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/dlclass.hpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/dlclass.hpp
 
 
-#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86PadCallInstruction.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86PadCallInstruction.cpp
+cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/DynamicMachinePass.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/DynamicMachinePass.h
 
+cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/DynamicMachinePass.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/DynamicMachinePass.cpp
 
-#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86PadCallInstructions.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86PadCallInstructions.cpp
+cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86.h
 
-#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86.h
-
-#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86TargetMachine.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86TargetMachine.cpp
+cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86TargetMachine.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86TargetMachine.cpp
 
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/include/llvm/Support/CodeGen.h /home/victor/Disertation/Workplace/tools/llvm/include/llvm/Support/CodeGen.h
 

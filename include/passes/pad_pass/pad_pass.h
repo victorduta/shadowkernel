@@ -18,26 +18,26 @@
 using namespace llvm;
 namespace llvm
 {
-class PadCallInstruction: public MachineFunctionPass {
+class DynamicMachinePass: public MachineFunctionPass {
 private:
     static char ID;
 public:
-    PadCallInstruction() : MachineFunctionPass(ID) {};
+    DynamicMachinePass() : MachineFunctionPass(ID) {};
 
-    virtual ~PadCallInstruction() {}
+    virtual ~DynamicMachinePass() {}
 
-    virtual FunctionPass* createX86PadCallInstruction() = 0;
+    virtual FunctionPass* createX86DynamicMachinePass() = 0;
 
     virtual bool runOnMachineFunction(MachineFunction &MF) = 0;
 
     virtual MachineFunctionProperties getRequiredProperties() const = 0;
     virtual StringRef getPassName() const = 0;
 
-    typedef PadCallInstruction * create_t();
-    typedef void destroy_t(PadCallInstruction *);
+    typedef DynamicMachinePass * create_t();
+    typedef void destroy_t(DynamicMachinePass *);
 
 };
-    char PadCallInstruction::ID = 0;
+    char DynamicMachinePass::ID = 0;
 }
 
 

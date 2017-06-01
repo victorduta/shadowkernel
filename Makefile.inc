@@ -78,7 +78,7 @@ AS=$(LLVMBIN)/llvm-as
 LLVMEXTRACT=$(LLVMPREFIX)/bin/opt
 
 
-
+export CODEGEN_PASS_PATH=$(INSTALL_PASS_DIR)/pad_pass.so
 
 
 ##################################################################################################

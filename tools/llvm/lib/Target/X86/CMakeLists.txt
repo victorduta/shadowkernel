@@ -45,8 +45,7 @@ set(sources
   X86MachineFunctionInfo.cpp
   X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
-  X86PadCallInstructions.cpp
-  X86PadCallInstruction.cpp
+  DynamicMachinePass.cpp
   X86RegisterInfo.cpp
   X86SelectionDAGInfo.cpp
   X86ShuffleDecodeConstantPool.cpp
