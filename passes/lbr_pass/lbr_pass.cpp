@@ -141,8 +141,11 @@ bool LbrPass::runOnFunction(Function &F)
   	  }
     }
 
+	Fp = &F;
+	M = Fp->getParent();
+
 #ifdef CHECK_FOR_LOCAL_BUFFERS
-    if (!hasLocalBuffers(F))
+    if (!RequiresStackProtector())
     {
 //#ifdef LBR_DEBUG_INFO
     	errs() << "runOnFunction:Function " << F.getName() << " has no local buffers\n";
@@ -161,7 +164,6 @@ bool LbrPass::runOnFunction(Function &F)
     vector<instruction_t *> instruction_list;
     getInstructionList<ReturnInst>(F, instruction_list);
 
-    Module *M = F.getParent();
 
     for(vector<instruction_t *>::const_iterator it = instruction_list.begin(),
     		                    ie = instruction_list.end(); it != ie; ++it)
@@ -308,22 +310,131 @@ void LbrPass::getEpilogue(Module *M)
     }
 }
 
-bool LbrPass::hasLocalBuffers(Function &F)
-{
-	vector<instruction_t *> instruction_list;
-	getInstructionList<AllocaInst>(F, instruction_list);
-	for(vector<instruction_t *>::const_iterator it = instruction_list.begin(),
-	    		                    ie = instruction_list.end(); it != ie; ++it)
-	{
-		AllocaInst *alloca = static_cast<AllocaInst*>((*it)->inst);
+bool LbrPass::HasAddressTaken(const Instruction *AI) {
+  for (const User *U : AI->users()) {
+    if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
+      if (AI == SI->getValueOperand())
+        return true;
+    } else if (const PtrToIntInst *SI = dyn_cast<PtrToIntInst>(U)) {
+      if (AI == SI->getOperand(0))
+        return true;
+    } else if (isa<CallInst>(U)) {
+      return true;
+    } else if (isa<InvokeInst>(U)) {
+      return true;
+    } else if (const SelectInst *SI = dyn_cast<SelectInst>(U)) {
+      if (HasAddressTaken(SI))
+        return true;
+    } else if (const PHINode *PN = dyn_cast<PHINode>(U)) {
+      // Keep track of what PHI nodes we have already visited to ensure
+      // they are only visited once.
+      if (VisitedPHIs.insert(PN).second)
+        if (HasAddressTaken(PN))
+          return true;
+    } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(U)) {
+      if (HasAddressTaken(GEP))
+        return true;
+    } else if (const BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
+      if (HasAddressTaken(BI))
+        return true;
+    }
+  }
+  return false;
+}
 
-	    if (alloca->getAllocatedType()->isArrayTy())
-	    {
-	    	return true;
-	    }
+bool LbrPass::ContainsProtectableArray(Type *Ty, bool &IsLarge,
+                                              bool Strong,
+                                              bool InStruct) const {
+  if (!Ty)
+    return false;
+  if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    if (!AT->getElementType()->isIntegerTy(8)) {
+      // If  we're inside of a structure, don't
+      // add stack protectors unless the array is a character array.
+      // However, in strong mode any array, regardless of type and size,
+      // triggers a protector.
+      if (!Strong && InStruct)
+        return false;
+    }
 
-	}
-	return false;
+    // If an array has more than SSPBufferSize bytes of allocated space, then we
+    // emit stack protectors.
+    if (ProtectedBufferSize <= M->getDataLayout().getTypeAllocSize(AT)) {
+      IsLarge = true;
+      return true;
+    }
+
+    if (Strong)
+      // Require a protector for all arrays in strong mode
+      return true;
+  }
+
+  const StructType *ST = dyn_cast<StructType>(Ty);
+  if (!ST)
+    return false;
+
+  bool NeedsProtector = false;
+  for (StructType::element_iterator I = ST->element_begin(),
+                                    E = ST->element_end();
+       I != E; ++I)
+    if (ContainsProtectableArray(*I, IsLarge, Strong, true)) {
+      // If the element is a protectable array and is large (>= SSPBufferSize)
+      // then we are done.  If the protectable array is not large, then
+      // keep looking in case a subsequent element is a large array.
+      if (IsLarge)
+        return true;
+      NeedsProtector = true;
+    }
+
+  return NeedsProtector;
+}
+
+
+bool LbrPass::RequiresStackProtector(){
+  bool Strong = false;
+  bool NeedsProtector = false;
+
+  if (Fp->hasFnAttribute(Attribute::StackProtectReq)) {
+    NeedsProtector = true;
+    Strong = true;
+  } else if (NeedsStrongProtector)
+    Strong = true;
+  else if (!Fp->hasFnAttribute(Attribute::StackProtect))
+    return false;
+
+  for (const BasicBlock &BB : *Fp) {
+    for (const Instruction &I : BB) {
+      if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
+        if (AI->isArrayAllocation()) {
+          if (const auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
+            if (CI->getLimitedValue(ProtectedBufferSize) >= ProtectedBufferSize) {
+              // A call to alloca with size >= ProtectedBufferSize requires
+              // stack protectors.
+              NeedsProtector = true;
+            } else if (Strong) {
+              // Require protectors for all alloca calls in strong mode.
+              NeedsProtector = true;
+            }
+          } else {
+            NeedsProtector = true;
+          }
+          continue;
+        }
+
+        bool IsLarge = false;
+        if (ContainsProtectableArray(AI->getAllocatedType(), IsLarge, Strong)) {
+          NeedsProtector = true;
+          continue;
+        }
+
+        if (Strong && HasAddressTaken(AI)) {
+          NeedsProtector = true;
+        }
+      }
+    }
+  }
+
+  return NeedsProtector;
 }
 
 void LbrPass::getPads(Module *M)

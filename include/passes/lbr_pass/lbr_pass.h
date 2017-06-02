@@ -46,6 +46,9 @@ vector<string> global_functions = {"lbr_epilogue"};
 
 vector<string> global_pads={"pad_2nops", "pad_5nops"};
 
+unsigned int ProtectedBufferSize = 1;
+bool NeedsStrongProtector = true;
+
 namespace llvm {
 
  struct instruction_t
@@ -68,21 +71,29 @@ namespace llvm {
      bool isInstrumentable = true;
      // Pointer to the epilogue
      Function *epilogue = NULL;
+     Function *Fp;
+     Module   *M;
 
      /* Pointer to padding functions in case we do it
         at llvm IR level */
      Function *pad_2nops = NULL;
      Function *pad_5nops = NULL;
 
+     SmallPtrSet<const PHINode *, 16> VisitedPHIs;
+
 	 void cleanModuleInstrumentation(Module &M);
 	 void getEpilogue(Module *M);
 	 void getPads(Module *M);
-	 bool hasLocalBuffers(Function &F);
 
 	 template<class T> void getInstructionList(Function &F, vector<instruction_t *>& instruction_vec);
 
      void printCallStats(vector<instruction_t *>& instruction_vec);
      void instrumentCallInstructions(vector<instruction_t *>& instruction_vec);
+
+     bool ContainsProtectableArray(Type *Ty, bool &IsLarge, bool Strong, bool InStruct = false) const;
+     bool HasAddressTaken(const Instruction *AI);
+     bool RequiresStackProtector();
+
 
 };
 }
