@@ -21,6 +21,7 @@ string epilogue_name = "lbr_epilogue";
 
 #if defined(LBR_RELEASE) || defined(LBR_DEBUG)
 #include "exclude_functions.h"
+//vector<string> jump_modules =  {"arch/x86/entry/vdso/vdso32/vclock_gettime.c", "arch/x86/entry/vdso/vclock_gettime.c", "arch/x86/entry/vdso/vgetcpu.c", "kernel/locking", "kernel/qspinlock.c", "kernel/semaphore.c"};
 vector<string> jump_modules =  {"arch/x86/entry/vdso/vdso32/vclock_gettime.c", "arch/x86/entry/vdso/vclock_gettime.c", "arch/x86/entry/vdso/vgetcpu.c"};
 #endif
 
@@ -31,8 +32,8 @@ vector<string> global_variables = {"check_wrapper"};
 #endif
 
 #ifdef LBR_RELEASE
-vector<string> global_functions = {"lbr_epilogue"};
-vector<string> global_variables = {};
+vector<string> global_functions = {"lbr_epilogue" };
+vector<string> global_variables = {"add_lbr_entry"};
 #warning Building LBR RELEASE PASS
 #endif
 

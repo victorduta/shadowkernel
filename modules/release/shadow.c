@@ -10,16 +10,19 @@
 #include "shadow.h"
 #include "wrapper.h"
 #include "lbr-state.h"
+#include "cache.h"
 
 MODULE_AUTHOR("Duta Victor Marin");
 MODULE_DESCRIPTION("Release Shadow LBR Module");
 MODULE_LICENSE("GPL");
 
+#define CHUNK_SIZE 1000
 
 /****************************************************************************
  * EXPORTED FROM WRAPPER.C                                                  
  */
 
+extern struct address_entry lbr_entry_table[NUM_UNITS][NUM_ENTRIES];
 
 /****************************************************************************
  * MODULE FUNCTIONS AND VARS
@@ -28,6 +31,17 @@ MODULE_LICENSE("GPL");
 static int shadow_users = 0;
 static int shadow_initialized = 0;
 static struct lbr_stats stats;
+static struct function_stats f_stats;
+static struct address_entry f_entries[NUM_ENTRIES];
+
+noinline void test_rdmsrl()
+{
+   struct lbr_entry lbr;
+   preempt_disable(); 
+   rdmsrl(MSR_LBR_TOS,  lbr.tos);
+   rdmsrl(MSR_LBR_NHM_FROM + lbr.tos, lbr.from);
+   preempt_enable();
+}
 
 void get_lbr_stats(void *info) {
     unsigned long flags;
@@ -40,6 +54,53 @@ void get_lbr_stats(void *info) {
     put_cpu_var(n_misses);
 
     spin_unlock_irqrestore(&(stats->lock), flags);
+}
+
+void init_function_stats(void *info)
+{
+   int cpu;
+   struct address_entry *lbr_entries;
+   cpu = get_cpu();
+   lbr_entries = lbr_entry_table[cpu];
+   memset(lbr_entries, 0, NUM_ENTRIES*sizeof(struct address_entry));
+   put_cpu();
+}
+
+void get_function_stats(void *info)
+{
+   struct address_entry *lbr_entries;
+   unsigned long flags;
+   int i, j, cpu;
+   struct function_stats *stats=(struct function_stats *)(info);   
+   cpu = get_cpu();
+   lbr_entries = lbr_entry_table[cpu];
+   spin_lock_irqsave(&(stats->lock), flags);
+   for(i = 0; i < NUM_ENTRIES; i++)
+   {
+      if (lbr_entries[i].to == 0)
+      {
+         break;
+      }
+      for(j = 0; j < NUM_ENTRIES; j++)
+      {
+           if(stats->entries[j].to == lbr_entries[i].to)
+           {
+                stats->entries[j].nhits += lbr_entries[i].nhits;
+                break;
+           }
+           if(stats->entries[j].to == 0)
+           {
+              stats->entries[j].tos =  lbr_entries[i].tos;
+              stats->entries[j].from = lbr_entries[i].from;
+              stats->entries[j].to =   lbr_entries[i].to;
+              stats->entries[j].address = lbr_entries[i].address;
+              stats->entries[j].nhits = lbr_entries[i].nhits;
+              break;
+           }
+      }
+   }
+   spin_unlock_irqrestore(&(stats->lock), flags);
+   put_cpu();
 }
 
 /*****************************************************************************
@@ -67,7 +128,13 @@ int shadow_close(struct inode *inode, struct file *filp) {
 }
 
 static long shadow_ioctl(struct file *file, unsigned int cmd, unsigned long arg1) {
+    static int n_sent = 0;
+    static int initialized = 0;
     unsigned long flags;
+    struct lbr_entry lbr;
+    uint32_t cycles_high_start, cycles_low_start, cycles_high_finish, cycles_low_finish;
+    unsigned long long address = CACHE_SIZE+1;
+    int i;
     int wait = 1;
     switch(cmd)
     {
@@ -83,6 +150,105 @@ static long shadow_ioctl(struct file *file, unsigned int cmd, unsigned long arg1
                            printk(KERN_INFO "N_MISSES:%lld\n", stats.n_misses);
 
                            break;
+        case SHADOW_IOC_GET_CYCLES:
+			   __asm__ __volatile__("mfence;"
+		                                "CPUID\n\t"/*serialize*/
+                                                "RDTSC\n\t"/*read the clock*/
+                                                "mov %%edx, %0\n\t"
+                                                "mov %%eax, %1\n\t": "=r" (cycles_high_start), "=r"
+                                                (cycles_low_start):: "%rax", "%rbx", "%rcx", "%rdx");
+                            preempt_disable(); 
+                            rdmsrl(MSR_LBR_TOS,  lbr.tos);
+                            rdmsrl(MSR_LBR_NHM_FROM + lbr.tos, lbr.from);
+                            preempt_enable();
+                            __asm__ __volatile__ ("RDTSCP\n\t"/*read the clock*/
+                                                  "mov %%edx, %0\n\t"
+                                                  "mov %%eax, %1\n\t"
+                                                  "CPUID\n\t"
+                                                  "mfence;": "=r" (cycles_high_finish), "=r"
+                                                  (cycles_low_finish):: "%rax", "%rbx", "%rcx", "%rdx");
+
+                           printk(KERN_INFO "RDMSR cycles %d\n", cycles_low_finish - cycles_low_start);
+                           init_dummy_cache();
+                           __asm__ __volatile__("mfence;"
+		                                "CPUID\n\t"/*serialize*/
+                                                "RDTSC\n\t"/*read the clock*/
+                                                "mov %%edx, %0\n\t"
+                                                "mov %%eax, %1\n\t": "=r" (cycles_high_start), "=r"
+                                                (cycles_low_start):: "%rax", "%rbx", "%rcx", "%rdx");
+                           get_entry(address);
+                           //add_entry(address, 0);
+                            __asm__ __volatile__ ("RDTSCP\n\t"/*read the clock*/
+                                                  "mov %%edx, %0\n\t"
+                                                  "mov %%eax, %1\n\t"
+                                                  "CPUID\n\t"
+                                                  "mfence;": "=r" (cycles_high_finish), "=r"
+                                                  (cycles_low_finish):: "%rax", "%rbx", "%rcx", "%rdx");
+
+                           printk(KERN_INFO "Cache add cycles %d\n", cycles_low_finish - cycles_low_start);
+
+                           __asm__ __volatile__("mfence;"
+		                                "CPUID\n\t"/*serialize*/
+                                                "RDTSC\n\t"/*read the clock*/
+                                                "mov %%edx, %0\n\t"
+                                                "mov %%eax, %1\n\t": "=r" (cycles_high_start), "=r"
+                                                (cycles_low_start):: "%rax", "%rbx", "%rcx", "%rdx");
+                           test_rdmsrl();
+                            __asm__ __volatile__ ("RDTSCP\n\t"/*read the clock*/
+                                                  "mov %%edx, %0\n\t"
+                                                  "mov %%eax, %1\n\t"
+                                                  "CPUID\n\t"
+                                                  "mfence;": "=r" (cycles_high_finish), "=r"
+                                                  (cycles_low_finish):: "%rax", "%rbx", "%rcx", "%rdx");
+
+                           printk(KERN_INFO "Test rdmsrl1 %d\n", cycles_low_finish - cycles_low_start);
+
+                           __asm__ __volatile__("mfence;"
+		                                "CPUID\n\t"/*serialize*/
+                                                "RDTSC\n\t"/*read the clock*/
+                                                "mov %%edx, %0\n\t"
+                                                "mov %%eax, %1\n\t": "=r" (cycles_high_start), "=r"
+                                                (cycles_low_start):: "%rax", "%rbx", "%rcx", "%rdx");
+                           test_rdmsrl();
+                            __asm__ __volatile__ ("RDTSCP\n\t"/*read the clock*/
+                                                  "mov %%edx, %0\n\t"
+                                                  "mov %%eax, %1\n\t"
+                                                  "CPUID\n\t"
+                                                  "mfence;": "=r" (cycles_high_finish), "=r"
+                                                  (cycles_low_finish):: "%rax", "%rbx", "%rcx", "%rdx");
+
+                           printk(KERN_INFO "Test rdmsrl2 %d\n", cycles_low_finish - cycles_low_start);
+                          
+			   break;
+         case SHADOW_IOC_INIT_ENTRIES:
+			   on_each_cpu(init_function_stats, NULL, wait);
+                           break;
+         case SHADOW_IOC_GET_ENTRIES:
+                           if (!initialized)
+                           {
+                             spin_lock_init(&(f_stats.lock));
+                             f_stats.entries = f_entries;
+                             memset(f_entries, 0, NUM_ENTRIES*sizeof(struct address_entry));
+                             on_each_cpu(get_function_stats, &f_stats, wait);
+                             initialized = 1;
+                             n_sent = 0;
+                             printk(KERN_INFO"Reinit record structure\n");
+                           }
+                           if (n_sent >= NUM_ENTRIES)
+                           {
+                               initialized = 0;
+                               n_sent = 0;
+                               return 0;
+                           } 
+                           if (copy_to_user((void __user *)arg1, &f_entries[n_sent], CHUNK_SIZE*sizeof(struct address_entry)) != 0) {
+                                               printk(KERN_ERR "Could not copy needed records to userland\n");
+                                               initialized = 0;
+                                               n_sent = 0;
+                                               return -1;
+                           }
+                           n_sent += CHUNK_SIZE;
+                           return CHUNK_SIZE;
+         
     }
     return 0;
 

@@ -145,15 +145,18 @@ bool LbrPass::runOnFunction(Function &F)
 	M = Fp->getParent();
 
 #ifdef CHECK_FOR_LOCAL_BUFFERS
+	Fp->addFnAttr(Attribute::StackProtect);
     if (!RequiresStackProtector())
     {
 //#ifdef LBR_DEBUG_INFO
     	errs() << "runOnFunction:Function " << F.getName() << " has no local buffers\n";
 //#endif
+    	Fp->removeFnAttr(Attribute::StackProtect);
     	return false;
     }
     else
     {
+    	Fp->removeFnAttr(Attribute::StackProtect);
     	errs() << "runOnFunction:Function " << F.getName() << " has local buffers\n";
     }
 #endif

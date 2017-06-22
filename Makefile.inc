@@ -13,7 +13,7 @@ HAVE_GOLD=no_have_gold
 KERNEL_BUILD_TYPE=release
 KERNEL_VERSION=4.4.17
 
-CHECK_FOR_LOCAL_BUFFERS=True
+CHECK_FOR_LOCAL_BUFFERS=False
 
 # Defines used by kernel build system
 
@@ -22,6 +22,7 @@ LBR_INSTRUMENT_KERNEL=True
 ADD_DEBUG_KERNEL=False
 INCLUDE_RDMSR=True
 INCLUDE_RA_REWRITE=False
+INCLUDE_MEASURE_INSTRUMENTATION=False
 
 
 #########################################

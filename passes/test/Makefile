@@ -22,9 +22,13 @@ all: clean test_1.plain
 %.bc: %.c
 	$(CXX) -emit-llvm -c $(KERNELARGS) -o $@ $<
 	
-
 help:
 	$(OPT) --help-hidden | grep debug
+
+lto:
+	$(CXX) -flto -c a.c -o a.o
+	$(CXX) -c test_2.c -o main.o 
+	$(CXX) -flto a.o main.o -o main
 
 clean:
 	rm -f *.bc *.o *.s *.plain *.ll

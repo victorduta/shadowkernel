@@ -7,9 +7,16 @@
 #include <linux/spinlock.h>
 #include <linux/spinlock_types.h>
 
+#include "wrapper.h"
+
 struct lbr_stats {
    uint64_t n_hits;
    uint64_t n_misses;
+   spinlock_t lock;
+};
+
+struct function_stats {
+   struct address_entry *entries;
    spinlock_t lock;
 };
 
@@ -21,6 +28,9 @@ struct lbr_stats {
 
 #define SHADOW_IOC_MAGIC 'l'
 #define SHADOW_IOC_TEST                   _IO(SHADOW_IOC_MAGIC,  1)
+#define SHADOW_IOC_GET_CYCLES             _IO(SHADOW_IOC_MAGIC,  2)
+#define SHADOW_IOC_INIT_ENTRIES		  _IO(SHADOW_IOC_MAGIC,  3)
+#define SHADOW_IOC_GET_ENTRIES            _IO(SHADOW_IOC_MAGIC,  4)
 #define SHADOW_MINOR 133
 
 #endif /* __SHADOW_H__ */
