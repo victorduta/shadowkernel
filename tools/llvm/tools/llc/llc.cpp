@@ -72,6 +72,9 @@ TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
 static cl::opt<bool>
 NoIntegratedAssembler("no-integrated-as", cl::Hidden,
                       cl::desc("Disable integrated assembler"));
+static cl::opt<bool>
+PadCalls("pad-calls", cl::Hidden,
+                      cl::desc("Pad instructions with nops"));
 
 static cl::opt<bool>
     PreserveComments("preserve-as-comments", cl::Hidden,
@@ -401,6 +404,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.MCOptions.AsmVerbose = AsmVerbose;
   Options.MCOptions.PreserveAsmComments = PreserveComments;
   Options.MCOptions.IASSearchPaths = IncludeDirs;
+  Options.PadCalls = PadCalls;
 
   std::unique_ptr<TargetMachine> Target(
       TheTarget->createTargetMachine(TheTriple.getTriple(), CPUStr, FeaturesStr,

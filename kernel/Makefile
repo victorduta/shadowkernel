@@ -9,6 +9,10 @@ TARGETS= config build_kernel build_modules install_modules install_image install
 CONFIG_TARGETS= clean_kernel clean def_config
 WD=$(PWD)
 
+ifeq ($(LTO_ENABLED),True)
+#llvmLinux_KCFLAGS+=-flto
+endif
+
 ifeq ($(KERNEL_BUILD_TYPE),debug)
 DFLAGS=-DLBR_DEBUG
 endif
@@ -61,6 +65,15 @@ llvmLinux_PER_FILE_FLAGS += CFLAGS_vclock_gettime.o+="$(KCFLAGS_EXTRA)"
 llvmLinux_PER_FILE_FLAGS += CFLAGS_empty.o+="$(KCFLAGS_SCRIPTS)"
 llvmLinux_PER_FILE_FLAGS += CFLAGS_bounds.o+="$(KCFLAGS_SCRIPTS)"
 
+ifeq ($(LTO_ENABLED),True)
+
+LTO_EXTRA_VMLINUX=LTO_EXTRA_VMLINUX="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=emit-llvm"
+LTO_EXTRA_C_FLAGS=LTO_EXTRA_C_FLAGS="-flto"
+LTO_EXTRA_LD_FLAGS=LTO_EXTRA_LD_FLAGS="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=emit-llvm"
+LTO_EXTRA_LLC_FLAGS=LTO_EXTRA_LLC_FLAGS="-code-model=kernel  -disable-tail-calls  -disable-fp-elim -pad-calls"
+
+endif
+
 llvmLinux_REDIRECT_BUILD_KERNEL= 1> kernel_dump 2> kernel_dump
 llvmLinux_REDIRECT_BUILD_MODULES= 1> kernel_module_dump 2> kernel_module_dump
 llvmLinux_REDIRECT_INSTALL_IMAGE= 1> kernel_install_dump 2> kernel_install_dump
@@ -89,27 +102,28 @@ $(patsubst %,install_image_%,$(DIRS)): DIR = $(subst install_image_,,$@)
 $(patsubst %,install_image_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS_MODULES)
 $(patsubst %,install_image_%,$(DIRS)): REDIRECT_INSTALL_IMAGE = $($(DIR)_REDIRECT_INSTALL_IMAGE)
 $(patsubst %,install_image_%,$(DIRS)):
-	sudo $(MAKE) -C $(DIR) install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_INSTALL_IMAGE)
+	sudo $(MAKE) -C $(DIR) install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD)  KCFLAGS="$(KCFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_INSTALL_IMAGE)
 
 $(patsubst %,install_modules_%,$(DIRS)): DIR = $(subst install_modules_,,$@)
 $(patsubst %,install_modules_%,$(DIRS)): KCFLAGS_MODULES = $($(DIR)_KCFLAGS_MODULES)
 $(patsubst %,install_modules_%,$(DIRS)): REDIRECT_INSTALL_MODULES = $($(DIR)_REDIRECT_INSTALL_MODULES)
 $(patsubst %,install_modules_%,$(DIRS)):
-	sudo $(MAKE) -C $(DIR) modules_install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS_MODULES)" $(CORES) $(VERBOSE)  $(REDIRECT_INSTALL_MODULES)
+	sudo $(MAKE) -C $(DIR) modules_install CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD)  KCFLAGS="$(KCFLAGS_MODULES)" $(CORES) $(VERBOSE)  $(REDIRECT_INSTALL_MODULES)
 
 $(patsubst %,build_modules_%,$(DIRS)): DIR = $(subst build_modules_,,$@)
 $(patsubst %,build_modules_%,$(DIRS)): KCFLAGS_MODULES = $($(DIR)_KCFLAGS_MODULES)
 $(patsubst %,build_modules_%,$(DIRS)): REDIRECT_BUILD_MODULES = $($(DIR)_REDIRECT_BUILD_MODULES)
 $(patsubst %,build_modules_%,$(DIRS)):
-	$(MAKE) -C $(DIR) modules CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold  KCFLAGS="$(KCFLAGS_MODULES)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_MODULES)
+	$(MAKE) -C $(DIR) modules CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD)  KCFLAGS="$(KCFLAGS_MODULES)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_MODULES)
 
 $(patsubst %,build_kernel_%,$(DIRS)): DIR = $(subst build_kernel_,,$@)
 $(patsubst %,build_kernel_%,$(DIRS)): KCFLAGS = $($(DIR)_KCFLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): KAFLAGS = $($(DIR)_KAFLAGS)
+$(patsubst %,build_kernel_%,$(DIRS)): KLDFLAGS = $($(DIR)_KLDFLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): PER_FILE_FLAGS = $($(DIR)_PER_FILE_FLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): REDIRECT_BUILD_KERNEL = $($(DIR)_REDIRECT_BUILD_KERNEL)
 $(patsubst %,build_kernel_%,$(DIRS)):
-	$(MAKE) -C $(DIR) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold $(PER_FILE_FLAGS)  KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
+	$(MAKE) -C $(DIR) LLVM_NM=$(LLVM_NM) LLC=$(LLC) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD) HAVE_LTO=$(LTO_ENABLED)  $(LTO_EXTRA_VMLINUX) $(LTO_EXTRA_C_FLAGS) $(LTO_EXTRA_LD_FLAGS) $(LTO_EXTRA_LLC_FLAGS) $(PER_FILE_FLAGS) KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
 
 
 
@@ -126,8 +140,8 @@ dbg_config_baseKernel:
 
 $(patsubst %,def_config_%,$(DIRS)): DIR = $(subst def_config_,,$@)
 $(patsubst %,def_config_%,$(DIRS)):
-	$(MAKE) -C $(DIR) x86_64_defconfig CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=ld.gold 
-	$(MAKE) -C $(DIR) kvmconfig CC=$(CXX) HOSTCC=$(CXX) AS=$(AS)  LD=ld.gold 
+	$(MAKE) -C $(DIR) x86_64_defconfig CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD) 
+	$(MAKE) -C $(DIR) kvmconfig CC=$(CXX) HOSTCC=$(CXX) AS=$(AS)  LD=$(LD) 
 	
 
 $(patsubst %,clean_%,$(DIRS)): DIR = $(subst clean_,,$@)
@@ -141,6 +155,7 @@ $(patsubst %,clean_kernel_%,$(DIRS)):
 clean_dump:
 	rm -f kernel_*
 	rm -f base_kernel_*
+
 
 
 

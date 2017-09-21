@@ -13,13 +13,13 @@ PATH_TO_BACKUP=/home/victor/Disertation/Workplace/tools/llvm
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/dlclass.hpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/dlclass.hpp
 
 
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/DynamicMachinePass.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/DynamicMachinePass.h
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/DynamicMachinePass.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/DynamicMachinePass.h
 
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/DynamicMachinePass.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/DynamicMachinePass.cpp
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/DynamicMachinePass.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/DynamicMachinePass.cpp
 
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86.h
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86.h /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86.h
 
-cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86TargetMachine.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86TargetMachine.cpp
+#cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target/X86/X86TargetMachine.cpp /home/victor/Disertation/Workplace/tools/llvm/lib/Target/X86/X86TargetMachine.cpp
 
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/include/llvm/Support/CodeGen.h /home/victor/Disertation/Workplace/tools/llvm/include/llvm/Support/CodeGen.h
 
@@ -37,6 +37,8 @@ cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/lib/Target
  
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/tools/clang/include/clang/Driver/Options.td /home/victor/Disertation/Workplace/tools/llvm/tools/clang/include/clang/Driver/Options.td
 #cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/tools/clang/lib/Driver/Tools.cpp /home/victor/Disertation/Workplace/tools/llvm/tools/clang/lib/Driver/Tools.cpp
+
+cp /home/victor/workspace/pass-maker/passes/llvm_source_tree_4.0/llvm/tools/llc/llc.cpp /home/victor/Disertation/Workplace/tools/llvm/tools/llc/llc.cpp
 
 
 
