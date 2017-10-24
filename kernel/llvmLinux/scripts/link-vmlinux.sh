@@ -30,6 +30,18 @@ set -e
 
 #LTO added functionality
 
+fix_kernel_builtin()
+{
+   ${LTO_DIS} kernel/built-in.bc
+   head -4 kernel/built-in.ll > intermediary.ll
+   cat .lto-fixup >> intermediary.ll
+   awk '(!($1 ~ /^module$/)||!($2 ~ /^asm$/))&&(!($1 ~ /^;$/)||!($2 ~ /^ModuleID$/))&&(!($1 ~ /^source_filename$/)||!($2 ~ /^=$/))&&(!($1 ~ /^target$/)||!($2 ~ /^datalayout$/))&&(!($1 ~ /^target$/)||!($2 ~ /^triple$/)){print $0}' kernel/built-in.ll >> intermediary.ll
+  
+   ${LTO_AS} intermediary.ll -o kernel/built-in.bc
+
+   echo 'true'
+}
+
 get_matching_suffix()
 {
   declare -a element_list=("${!1}")
@@ -202,7 +214,163 @@ lto_vmlinux_link_ver1()
         #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
 }
 
+
 lto_modpost_link()
+{
+        local intermediate_array
+        local LTO_KBUILD_VMLINUX_INIT
+	local LTO_KBUILD_VMLINUX_MAIN
+        local LTO_OUTPUT_FILE
+        local LTO_PARTIAL_VMLINUX_INIT
+        local LTO_PARTIAL_VMLINUX_MAIN
+        local LTO_PARTIAL_OUTPUT_FILE
+        local LTO_LIBRARIES
+        local KBUILD_VMLINUX_MAIN_AUX
+        local LTO_ASSEMBLY_FILE
+        local LTO_INTERMEDIATE_BC_TO_O
+        local aux_array_1
+        local aux_array_2
+        local aux_string
+        local symbols
+        local vmlinux_init_array
+        local counter=0
+        local fix_kernel
+
+        KBUILD_VMLINUX_MAIN_AUX=${KBUILD_VMLINUX_MAIN}
+        intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        LTO_LIBRARIES=`get_matching_suffix intermediate_array[@] .a`
+        aux_array_1=(`echo ${LTO_LIBRARIES}`);
+        #KBUILD_VMLINUX_MAIN=`get_intersection intermediate_array[@] aux_array_1[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`get_existing_files intermediate_array[@]`
+
+        aux_array_1=(`echo ${KBUILD_VMLINUX_INIT}`);
+        aux_array_2=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        aux_string=`replace_suffix aux_array_2[@] .bc .o`
+        aux_array_2=(`echo ${aux_string}`);
+        LTO_PARTIAL_VMLINUX_INIT=`get_intersection aux_array_1[@] aux_array_2[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`get_existing_files intermediate_array[@]`
+
+        #aux_array_1=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        #aux_array_2=(`echo ${LTO_KBUILD_VMLINUX_MAIN}`);
+        #aux_string=`replace_suffix aux_array_2[@] .bc .o`
+        #aux_array_2=(`echo ${aux_string}`);
+        #LTO_PARTIAL_VMLINUX_MAIN=`get_intersection aux_array_1[@] aux_array_2[@]`
+
+        intermediate_array=(`echo ${1}`);
+        LTO_OUTPUT_FILE=`replace_suffix intermediate_array[@] .o .int_bc`
+        LTO_PARTIAL_OUTPUT_FILE=`replace_suffix intermediate_array[@] .o .int`
+        LTO_ASSEMBLY_FILE=`replace_suffix intermediate_array[@] .o .int_s`
+        LTO_INTERMEDIATE_BC_TO_O=`replace_suffix intermediate_array[@] .o .int_o`
+        
+        intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}  ${LTO_KBUILD_VMLINUX_INIT}`);
+	symbols=`get_nm_files intermediate_array[@]`
+        symbols=`get_undefined_symbols`
+        
+        fix_kernel=`fix_kernel_builtin`
+
+        rm -f empty.o
+        rm -f begin.o
+	${AR} rcsD empty.o
+	${LD} -m elf_x86_64 ${symbols} -r -o begin.o empty.o
+        
+        for i in ${LTO_KBUILD_VMLINUX_INIT}
+        do
+            ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${i//.bc/.s_int} ${i}
+            ${AS} --64 -o ${i//.bc/.o_int} ${i//.bc/.s_int}
+	    vmlinux_init_array[$counter]=${i//.bc/.o_int}
+            #rm -f ${i//.bc/.s_int}
+            let counter=counter+1
+        done
+        LTO_KBUILD_VMLINUX_INIT=$(echo "${vmlinux_init_array[@]}")
+
+ 
+        ${LD} ${LDFLAGS} ${LTO_EXTRA_VMLINUX} -r -o ${LTO_OUTPUT_FILE} begin.o                   \
+		 --start-group ${LTO_KBUILD_VMLINUX_MAIN} --end-group
+        ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${LTO_ASSEMBLY_FILE} ${LTO_OUTPUT_FILE}
+	${AS} --64 -o ${LTO_INTERMEDIATE_BC_TO_O} ${LTO_ASSEMBLY_FILE}
+
+        ${LTO_LD} ${LDFLAGS} -r -o ${1} ${LTO_PARTIAL_VMLINUX_INIT} ${LTO_KBUILD_VMLINUX_INIT}              \
+		--start-group  ${KBUILD_VMLINUX_MAIN} ${LTO_INTERMEDIATE_BC_TO_O} --end-group
+
+        #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
+        
+}
+
+lto_vmlinux_link()
+{
+        local intermediate_array
+        local LTO_KBUILD_VMLINUX_INIT
+	local LTO_KBUILD_VMLINUX_MAIN
+        local LTO_OUTPUT_FILE
+        local LTO_PARTIAL_VMLINUX_INIT
+        local LTO_PARTIAL_VMLINUX_MAIN
+        local LTO_PARTIAL_OUTPUT_FILE
+        local LTO_LIBRARIES
+        local KBUILD_VMLINUX_MAIN_AUX
+        local LTO_ASSEMBLY_FILE
+        local LTO_INTERMEDIATE_BC_TO_O
+        local aux_array_1
+        local aux_array_2
+        local aux_string
+        local symbols
+        local vmlinux_init_array
+        local counter=0
+
+        #KBUILD_VMLINUX_MAIN_AUX=${KBUILD_VMLINUX_MAIN}
+        #intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        #LTO_LIBRARIES=`get_matching_suffix intermediate_array[@] .a`
+        #aux_array_1=(`echo ${LTO_LIBRARIES}`);
+        #KBUILD_VMLINUX_MAIN=`get_intersection intermediate_array[@] aux_array_1[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`get_existing_files intermediate_array[@]`
+
+        aux_array_1=(`echo ${KBUILD_VMLINUX_INIT}`);
+        aux_array_2=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        aux_string=`replace_suffix aux_array_2[@] .bc .o`
+        aux_array_2=(`echo ${aux_string}`);
+        LTO_PARTIAL_VMLINUX_INIT=`get_intersection aux_array_1[@] aux_array_2[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`get_existing_files intermediate_array[@]`
+
+        for i in ${LTO_KBUILD_VMLINUX_INIT}
+        do
+            ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${i//.bc/.s_int} ${i}
+            ${AS} --64 -o ${i//.bc/.o_int} ${i//.bc/.s_int}
+	    vmlinux_init_array[$counter]=${i//.bc/.o_int}
+            #rm -f ${i//.bc/.s_int}
+            let counter=counter+1
+        done
+        LTO_KBUILD_VMLINUX_INIT=$(echo "${vmlinux_init_array[@]}")
+
+        ${LD} ${LDFLAGS} ${LTO_EXTRA_VMLINUX} -r -o ${1}.int_bc begin.o                  \
+		--start-group ${LTO_KBUILD_VMLINUX_MAIN} --end-group
+
+        ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${1}.int_s ${1}.int_bc
+	${AS} --64 -o ${1}.int_o ${1}.int_s
+
+      	${LTO_LD} ${LDFLAGS} ${LDFLAGS_vmlinux} -o ${1}                  \
+			-T ${lds} ${LTO_PARTIAL_VMLINUX_INIT} ${LTO_KBUILD_VMLINUX_INIT}                   \
+			--start-group ${KBUILD_VMLINUX_MAIN}  ${1}.int_o  --end-group ${2}
+
+        #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
+}
+
+
+lto_modpost_link_ver2()
 {
         local intermediate_array
         local LTO_KBUILD_VMLINUX_INIT
@@ -276,7 +444,7 @@ lto_modpost_link()
         
 }
 
-lto_vmlinux_link()
+lto_vmlinux_link_ver2()
 {
         local intermediate_array
         local LTO_KBUILD_VMLINUX_INIT
@@ -431,7 +599,7 @@ cleanup()
 	rm -f .tmp_System.map
 	rm -f .tmp_kallsyms*
 	rm -f .tmp_version
-	rm -f .tmp_vmlinux*
+	#rm -f .tmp_vmlinux*
 	rm -f System.map
 	rm -f vmlinux
 	rm -f vmlinux.o

@@ -67,12 +67,24 @@ llvmLinux_PER_FILE_FLAGS += CFLAGS_bounds.o+="$(KCFLAGS_SCRIPTS)"
 
 ifeq ($(LTO_ENABLED),True)
 
-LTO_EXTRA_VMLINUX=LTO_EXTRA_VMLINUX="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=emit-llvm"
+LTO_EXTRA_VMLINUX=LTO_EXTRA_VMLINUX="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=O0 -plugin-opt=emit-llvm"
 LTO_EXTRA_C_FLAGS=LTO_EXTRA_C_FLAGS="-flto"
-LTO_EXTRA_LD_FLAGS=LTO_EXTRA_LD_FLAGS="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=emit-llvm"
-LTO_EXTRA_LLC_FLAGS=LTO_EXTRA_LLC_FLAGS="-code-model=kernel  -disable-tail-calls  -disable-fp-elim -pad-calls"
+LTO_EXTRA_LD_FLAGS=LTO_EXTRA_LD_FLAGS="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=O0 -plugin-opt=emit-llvm"
+LTO_EXTRA_VMLINUX_FINAL=LTO_EXTRA_VMLINUX_FINAL="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=-code-model=kernel -plugin-opt=O0"
+LTO_EXTRA_LLC_FLAGS=LTO_EXTRA_LLC_FLAGS="-code-model=kernel  -disable-tail-calls  -disable-fp-elim"
+LTO_LD=LTO_LD=$(DEFAULT_LD)
+LTO_DIS=LTO_DIS=$(LLVM_DIS)
+LTO_AS=LTO_AS=$(LLVM_AS)
+
+ifeq ($(NOP_PAD_KERNEL),True)
+LTO_EXTRA_LLC_FLAGS +=-pad-calls
+endif
+
+CONFIG_TARGETS+=lto_config
 
 endif
+
+#CONFIG_TARGETS+=lto_config
 
 llvmLinux_REDIRECT_BUILD_KERNEL= 1> kernel_dump 2> kernel_dump
 llvmLinux_REDIRECT_BUILD_MODULES= 1> kernel_module_dump 2> kernel_module_dump
@@ -123,7 +135,7 @@ $(patsubst %,build_kernel_%,$(DIRS)): KLDFLAGS = $($(DIR)_KLDFLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): PER_FILE_FLAGS = $($(DIR)_PER_FILE_FLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): REDIRECT_BUILD_KERNEL = $($(DIR)_REDIRECT_BUILD_KERNEL)
 $(patsubst %,build_kernel_%,$(DIRS)):
-	$(MAKE) -C $(DIR) LLVM_NM=$(LLVM_NM) LLC=$(LLC) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD) HAVE_LTO=$(LTO_ENABLED)  $(LTO_EXTRA_VMLINUX) $(LTO_EXTRA_C_FLAGS) $(LTO_EXTRA_LD_FLAGS) $(LTO_EXTRA_LLC_FLAGS) $(PER_FILE_FLAGS) KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
+	$(MAKE) -C $(DIR) LLVM_NM=$(LLVM_NM) LLC=$(LLC) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD) HAVE_LTO=$(LTO_ENABLED) $(LTO_LD) $(LTO_DIS) $(LTO_AS) $(LTO_EXTRA_VMLINUX) $(LTO_EXTRA_VMLINUX_FINAL) $(LTO_EXTRA_C_FLAGS) $(LTO_EXTRA_LD_FLAGS) $(LTO_EXTRA_LLC_FLAGS) $(PER_FILE_FLAGS) KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
 
 
 
@@ -131,6 +143,11 @@ config_baseKernel: $(patsubst %,%_baseKernel,$(CONFIG_TARGETS))
 
 config_llvmLinux: $(patsubst %,%_llvmLinux,$(CONFIG_TARGETS))
 
+
+lto_config_llvmLinux:
+	cd llvmLinux; ./scripts/kconfig/merge_config.sh .config .config-lto; cd ..
+lto_config_baseKernel:
+	true;
 
 dbg_config_llvmLinux:
 	cd llvmLinux; ./scripts/kconfig/merge_config.sh .config .config-fragment; cd ..
