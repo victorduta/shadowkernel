@@ -21,6 +21,6 @@ export EXTRACT_VMLINUX=/usr/src/linux-headers-$HEADERS_VERSION/scripts/extract-v
 export ROOTFS_DIR=${QEMU_DIR}/rootfs
 export ROOTFS_IMG=rootfs.img
 export MODULE_NAME=shadow-module.ko
-export MODULE_PATH=$PWD/lbr_module
+export MODULE_PATH=$PWD/modules/release
 export MKNOD_SCRIPT=mknod.sh
 export IOCTL_SCRIPT=try_ioctl

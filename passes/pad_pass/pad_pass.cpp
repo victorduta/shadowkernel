@@ -87,7 +87,9 @@ void PadCallInstructionImpl::padCallInstruction(MachineBasicBlock::instr_iterato
 
 	size = getInstructionSize(*(parent->getParent()), &(*(it)));
 
+#ifdef INCLUDE_DEBUG
 	printf("Size of the call is %d\n", size);
+#endif
 
 	size = PADDED_CALL_SIZE - size;
 	++next;
@@ -140,8 +142,6 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 {
 	unsigned int size = 1; // All calls have an opcode of 1 byte
     unsigned int OpCode = MI->getOpcode();
-	MI->print(errs());
-	errs() << "\n\n\n";
 
 
 	if(OpCode == X86::CALL64pcrel32)
@@ -163,7 +163,9 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 			unsigned int regval = reg.getReg();
 			if (regval == 0)
 			{
+#ifdef INCLUDE_DEBUG
 				printf("getInstructionSize: CALL64r has the %noreg as first element");
+#endif
 				return MIN_CALL_SIZE;
 			}
 
@@ -181,7 +183,9 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 		else
 		{
 			/* Just log error here so we further check this issue */
+#ifdef INCLUDE_DEBUG
 			printf("getInstructionSize: CALL64r doesn't have register as first element\n");
+#endif
 			return MIN_CALL_SIZE;
 		}
 	}
@@ -192,7 +196,9 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 		 *  We don't support this case yet, but in any case
 		 *  the call is at least 2 bytes in size
 		 */
+#ifdef INCLUDE_DEBUG
 		printf("getInstructionSize: Unknown type of call\n");
+#endif
 		return MIN_CALL_SIZE;
 	}
 
@@ -208,7 +214,9 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 	}
 	if (numOperands < CALL64_M_USED_OPERANDS)
 	{
+#ifdef INCLUDE_DEBUG
 		printf("getInstructionSize: CALL64m doesn't have all operands set\n");
+#endif
 		return MIN_CALL_SIZE;
 	}
 
@@ -216,12 +224,16 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 	if(!MI->getOperand(0).isReg() || !MI->getOperand(2).isReg() ||
 			   !MI->getOperand(4).isReg())
 	{
+#ifdef INCLUDE_DEBUG
 		printf("getInstructionSize: CALL64m doesn't have operands 0,2,4 set to registers\n");
+#endif
 		return MIN_CALL_SIZE;
 	}
 	if(!MI->getOperand(1).isImm())
 	{
+#ifdef INCLUDE_DEBUG
 		printf("getInstructionSize: CALL64m doesn't have operand 1 set to imm\n");
+#endif
 		return MIN_CALL_SIZE;
 	}
     unsigned int reg1 = MI->getOperand(0).getReg();
@@ -268,13 +280,17 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
     if(!MI->getOperand(3).isImm())
     {
     	/* In 64 bit all symbols are extended to 32 bits */
+#ifdef INCLUDE_DEBUG
     	printf("getInstructionSize: Signal symbol\n");
+#endif
     	operand_size = 4;
     }
     else if(reg1 == X86::RIP)
     {
     	/* RIP relative adressing has the offset extended to 32 bits*/
+#ifdef INCLUDE_DEBUG
     	printf("getInstructionSize: Signal RIP addressing\n");
+#endif
     	operand_size = 4;
     }
     else
@@ -308,14 +324,18 @@ unsigned int PadCallInstructionImpl::getInstructionSize(MachineFunction &MF, Mac
 
     if (size >= PADDED_CALL_SIZE)
     {
+#ifdef INCLUDE_DEBUG
     	printf("getInstructionSize: Signal operation trim\n");
+#endif
     	size = PADDED_CALL_SIZE;
     }
 
     if(reg3 != 0)
     {
     	/* This shouldn't happen in 64 bit mode */
+#ifdef INCLUDE_DEBUG
     	printf("getInstructionSize: Signal segment register\n");
+#endif
     }
 
 	return size;
@@ -362,7 +382,9 @@ bool PadCallInstructionImpl::runOnMachineFunction(MachineFunction &MF) {
 
       if(!STI->is64Bit())
       {
+#ifdef INCLUDE_DEBUG
     	  printf("Error:Only instrument in 64bit mode %s\n", MF.getName());
+#endif
     	  return false;
       }
 

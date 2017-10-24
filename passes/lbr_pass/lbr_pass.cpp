@@ -134,9 +134,9 @@ bool LbrPass::runOnFunction(Function &F)
     {
   	  if(F.getName().compare(*it) == 0)
   	  {
-#ifdef LBR_DEBUG_INFO
-  		  errs() << "runOnFunction:Skip function " << *it << "!\n";
-#endif
+//#ifdef LBR_DEBUG_INFO
+  		  errs() << "runOnFunction:Skip function " << *it << " from module " << F.getParent()->getName() << "!\n";
+//#endif
   		  return false;
   	  }
     }
@@ -148,16 +148,19 @@ bool LbrPass::runOnFunction(Function &F)
 	Fp->addFnAttr(Attribute::StackProtect);
     if (!RequiresStackProtector())
     {
-//#ifdef LBR_DEBUG_INFO
+#ifdef LBR_DEBUG_INFO
     	errs() << "runOnFunction:Function " << F.getName() << " has no local buffers\n";
-//#endif
+#endif
     	Fp->removeFnAttr(Attribute::StackProtect);
     	return false;
     }
     else
     {
-    	Fp->removeFnAttr(Attribute::StackProtect);
+#ifdef LBR_DEBUG_INFO
     	errs() << "runOnFunction:Function " << F.getName() << " has local buffers\n";
+#endif
+    	Fp->removeFnAttr(Attribute::StackProtect);
+
     }
 #endif
 
@@ -213,11 +216,11 @@ bool LbrPass::runOnFunction(Function &F)
     }
 
 
-//#ifdef LBR_DEBUG_INFO
+#ifdef LBR_DEBUG_INFO
        errs() << "After instrumentation\n";
        F.print(errs());
        errs() << "========================\n";
-//#endif
+#endif
 
 	return true;
 }
@@ -599,4 +602,9 @@ static void registerLbrPass(const PassManagerBuilder & ,
 static RegisterStandardPasses
   RegisterMyPass(PassManagerBuilder::EP_VectorizerStart,
 		  registerLbrPass);
+
+/*
+static RegisterPass<LbrPass> X("hello", "Hello World Pass",
+                             false ,
+                             true );*/
 }

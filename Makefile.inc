@@ -6,7 +6,7 @@ HAVE_LLVM=1
 ##########################################
 
 BUILD_LLVM_TINY=build_llvm_tiny
-HAVE_GOLD=no_have_gold
+
 
 # Defines used by module and pass build system
 # KERNEL_BUILD_TYPE = debug/release
@@ -17,8 +17,10 @@ CHECK_FOR_LOCAL_BUFFERS=False
 
 # Defines used by kernel build system
 
-NOP_PAD_KERNEL=True
-LBR_INSTRUMENT_KERNEL=True
+LTO_ENABLED=True
+HAVE_GOLD=True
+NOP_PAD_KERNEL=False
+LBR_INSTRUMENT_KERNEL=False
 ADD_DEBUG_KERNEL=False
 INCLUDE_RDMSR=True
 INCLUDE_RA_REWRITE=False
@@ -75,11 +77,20 @@ PASSDIR=${PREFIX}/passes
 CXX=$(LLVMBIN)/clang
 OPT=$(LLVMBIN)/opt
 LLC=$(LLVMBIN)/llc
-AS=$(LLVMBIN)/llvm-as
+AS=$(LLVMBIN)/as
+AR=$(LLVMBIN)/ar
+LD=$(LLVMBIN)/ld.gold
+LLVM_AS=$(LLVMBIN)/llvm-as
+LLVM_DIS=$(LLVMBIN)/llvm-dis
+DEFAULT_LD=$(LLVMBIN)/ld
 LLVMEXTRACT=$(LLVMPREFIX)/bin/opt
+LLVM_NM=$(LLVMBIN)/nm
+LLVM_LINK=$(LLVMBIN)/llvm-link
 
 
 export CODEGEN_PASS_PATH=$(INSTALL_PASS_DIR)/pad_pass.so
+export PATH=$(LLVMBIN):$(shell printenv PATH)
+export LD_LIBRARY_PATH=$(LLVMLIB)
 
 
 ##################################################################################################
