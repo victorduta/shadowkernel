@@ -1,7 +1,7 @@
 
 include $(ROOT)/Makefile.inc
 HEADERS = $(wildcard $(INCLUDE_PASS_DIR)/$(PASSNAME)/*.h)
-IFLAGS +=  -I$(INCLUDE_PASS_DIR)/$(PASSNAME)
+IFLAGS +=  -I$(INCLUDE_PASS_DIR)/$(PASSNAME) -I$(INCLUDE_PASS_DIR)
 
 PASSLIBNAME =$(PASSNAME).so
 
@@ -14,7 +14,9 @@ LDFLAGS += $(shell $(LLVMPREFIX)/bin/llvm-config --ldflags)
 
 INSTALL_DIR=${INSTALL_PASS_DIR}
 
+CXX=c++
 all: $(PASSLIBNAME)
+
 
 $(PASSLIBNAME): $(OBJS)
 	$(QUIET) $(ECHO) "  [LINK] $@"

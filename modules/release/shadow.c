@@ -65,7 +65,7 @@ void init_function_stats(void *info)
    memset(lbr_entries, 0, NUM_ENTRIES*sizeof(struct address_entry));
    put_cpu();
 }
-
+#ifndef INCLUDE_EXTENDED_MEASUREMENTS
 void get_function_stats(void *info)
 {
    struct address_entry *lbr_entries;
@@ -102,6 +102,63 @@ void get_function_stats(void *info)
    spin_unlock_irqrestore(&(stats->lock), flags);
    put_cpu();
 }
+#else
+void get_function_stats(void *info)
+{
+   struct address_entry *lbr_entries;
+   unsigned long flags;
+   int i, j, cpu, k, t;
+   struct function_stats *stats=(struct function_stats *)(info);   
+   cpu = get_cpu();
+   lbr_entries = lbr_entry_table[cpu];
+   spin_lock_irqsave(&(stats->lock), flags);
+   for(i = 0; i < NUM_ENTRIES; i++)
+   {
+      if (lbr_entries[i].to == 0)
+      {
+         break;
+      }
+      for(j = 0; j < NUM_ENTRIES; j++)
+      {
+           if(stats->entries[j].to == lbr_entries[i].to)
+           {
+                for( k = 0; k < lbr_entries[i].from_length; k++)
+                {
+                   for(t = 0; t < stats->entries[j].from_length; t++)
+                   {
+                       if (lbr_entries[i].from[k].from == stats->entries[j].from[t].from)
+                       {
+                           stats->entries[j].from[t].nhits += lbr_entries[i].from[k].nhits;
+                           break;
+                       }
+                   } 
+ 
+                   if ( (t ==  stats->entries[j].from_length) && (stats->entries[j].from_length <= NUM_FROM))
+                   {
+                        stats->entries[j].from_length++;
+                        stats->entries[j].from[t].nhits = lbr_entries[i].from[k].nhits;
+                        stats->entries[j].from[t].from =  lbr_entries[i].from[k].from;
+                   }
+                }
+                stats->entries[j].nhits += lbr_entries[i].nhits;
+                break;
+           }
+           if(stats->entries[j].to == 0)
+           {
+              stats->entries[j].tos =  lbr_entries[i].tos;
+              stats->entries[j].to =   lbr_entries[i].to;
+              stats->entries[j].address = lbr_entries[i].address;
+              stats->entries[j].nhits = lbr_entries[i].nhits;
+              stats->entries[j].from_length = lbr_entries[i].from_length;
+              memcpy(stats->entries[j].from, lbr_entries[i].from,  (lbr_entries[i].from_length)*sizeof(struct from_entry));
+              break;
+           }
+      }
+   }
+   spin_unlock_irqrestore(&(stats->lock), flags);
+   put_cpu();
+}
+#endif
 
 /*****************************************************************************
  * MODULE INTERFACE

@@ -57,7 +57,11 @@ void lbr_epilogue(void *frame)
 { 
 
 #if !defined(SKIP_SCRIPT_INSTRUMENTATION) && !defined(SKIP_INSTRUMENTATION)
+#ifndef INCLUDE_EXTENDED_MEASUREMENTS
    struct address_entry entry;
+#else
+   struct from_entry entry;
+#endif
    unsigned long long *address_slot = (unsigned long long*)((char *)frame+8);
    
    preempt_disable(); 
