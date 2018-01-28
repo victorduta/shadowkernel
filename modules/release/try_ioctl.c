@@ -13,7 +13,7 @@
 #define GET_CYCLES "get_cycles"
 
 struct address_entry addr_entries[NUM_ENTRIES];
-
+#ifndef INCLUDE_EXTENDED_MEASUREMENTS
 static void print_entries()
 {
    int i;
@@ -26,7 +26,25 @@ static void print_entries()
        printf("%llx %lld\n", addr_entries[i].to, addr_entries[i].nhits);
    }
 }
+#else
+static void print_entries()
+{
+   int i,j;
+   for(i = 0; i < NUM_ENTRIES; i++)
+   {
+       if(addr_entries[i].to == 0)
+       {
+           break;
+       }
+       printf("TO %llx %lld\n", addr_entries[i].to, addr_entries[i].nhits);
 
+       for(j = 0; j < addr_entries[i].from_length; j++)
+       {
+          printf("FROM %llx %lld\n", addr_entries[i].from[j].from, addr_entries[i].from[j].nhits);
+       }
+   }
+}
+#endif
 static void interpret_cmd(int fd, char *cmd)
 {
    int ret;
