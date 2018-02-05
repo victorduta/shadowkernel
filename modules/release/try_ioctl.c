@@ -36,11 +36,10 @@ static void print_entries()
        {
            break;
        }
-       printf("TO %llx %lld\n", addr_entries[i].to, addr_entries[i].nhits);
 
        for(j = 0; j < addr_entries[i].from_length; j++)
        {
-          printf("FROM %llx %lld\n", addr_entries[i].from[j].from, addr_entries[i].from[j].nhits);
+          printf("%llx %lld %llx %lld %lld\n", addr_entries[i].to, addr_entries[i].nhits, addr_entries[i].from[j].from, addr_entries[i].from[j].nhits, addr_entries[i].from[j].sig);
        }
    }
 }

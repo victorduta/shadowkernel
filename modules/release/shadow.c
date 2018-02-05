@@ -133,11 +133,12 @@ void get_function_stats(void *info)
                        }
                    } 
  
-                   if ( (t ==  stats->entries[j].from_length) && (stats->entries[j].from_length <= NUM_FROM))
+                   if ( (t ==  stats->entries[j].from_length) && (stats->entries[j].from_length < NUM_FROM))
                    {
                         stats->entries[j].from_length++;
                         stats->entries[j].from[t].nhits = lbr_entries[i].from[k].nhits;
                         stats->entries[j].from[t].from =  lbr_entries[i].from[k].from;
+                        stats->entries[j].from[t].sig =  lbr_entries[i].from[k].sig;
                    }
                 }
                 stats->entries[j].nhits += lbr_entries[i].nhits;

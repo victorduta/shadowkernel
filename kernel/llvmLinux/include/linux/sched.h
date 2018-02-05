@@ -1383,6 +1383,9 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
+#ifdef  INCLUDE_EXTENDED_MEASUREMENTS
+        volatile unsigned long long xxx_profile;
+#endif
 
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;

@@ -578,10 +578,21 @@ lto_modpost_link()
 		 --start-group ${LTO_KBUILD_VMLINUX_MAIN} --end-group
 
 
-        if [ "${LTO_INLINE}" == "True" ]; then
-                 ${LTO_OPT} ${LTO_EXTRA_OPT_FLAGS} -o  kernel.bc  ${LTO_OUTPUT_FILE} >  dump_calls_kernel       
+        if [ "${LTO_DECORATE}" == "True" ]; then
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_DECORATE_FLAGS} -o  aux_kernel.bc  ${LTO_OUTPUT_FILE}
+                 ${LTO_DIS} aux_kernel.bc
+                 #cat decorated_kernel.ll| grep -A 1 setXXSignature | tr -d "\-\-" | sed '/^$/d' > dump_markers_kernel
+                 awk '($1 ~ /^define$/){parent=$0} ($3 ~ /^@setXXSignature\(i64$/){signature=$0; getline; print parent"||||"signature"||||"$0}' aux_kernel.ll > dump_markers_kernel
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_MARKER_FLAGS} -o  decorated_kernel.bc  aux_kernel.bc
+                       
         else
-		cp  ${LTO_OUTPUT_FILE} kernel.bc
+		cp  ${LTO_OUTPUT_FILE} decorated_kernel.bc
+        fi
+
+        if [ "${LTO_INLINE}" == "True" ]; then
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_FLAGS} -o  kernel.bc  decorated_kernel.bc >  dump_calls_kernel       
+        else
+		cp  decorated_kernel.bc kernel.bc
         fi
         
         ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${LTO_ASSEMBLY_FILE} kernel.bc
