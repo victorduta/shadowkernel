@@ -33,7 +33,7 @@ namespace llvm {
 // Constructors
 //======================================
 
-LbrPass::LbrPass() : FunctionPass(ID) {};
+LbrPass::LbrPass() : FunctionPass(ID) {}
 
 //======================================
 // Public methods
@@ -85,6 +85,7 @@ bool LbrPass::runOnFunction(Function &F)
 #endif
 #endif
 
+
 	/* Instrumentation internals will not be instrumented */
     for(vector<string>::const_iterator fi= global_functions.begin(),
     		              fe = global_functions.end(); fi != fe; ++fi)
@@ -127,6 +128,35 @@ bool LbrPass::runOnFunction(Function &F)
    	{
    		return false;
    	}
+
+#ifdef INCLUDE_EXTENDED_MEASUREMENTS
+
+    Function::iterator b_iterator = F.begin();
+    BasicBlock *bb = &(*b_iterator);
+    Instruction *ii;
+    for(BasicBlock::iterator i_iterator = bb->begin(), e_iterator = bb->end(); i_iterator != e_iterator; ++i_iterator)
+    {
+    	ii = &(*i_iterator);
+    	if(!isa<AllocaInst>(ii))
+    	{
+            break;
+    	}
+    }
+    AllocaInst* pa = new AllocaInst(Type::getInt64Ty(F.getParent()->getContext()), 0, "profiler_xx", ii);
+
+    //pa->getType()->print(errs());
+    //pa->setAlignment(16);
+    Type *return_type = Type::getInt64Ty(F.getParent()->getContext());
+    FunctionType* signatureType = FunctionType::get(return_type, false);
+    Function* sigFunc = cast<Function>(F.getParent()->getOrInsertFunction("getXXSignature", signatureType));
+    CallInst *ci = CallInst::Create(sigFunc, "", ii);
+
+    StoreInst* si = new StoreInst(ci, pa, ii);
+
+
+    //bb->print(errs());
+
+#endif
 
     /* Functions that are manually blacklisted will not be instrumented */
     for(vector<string>::const_iterator it = jump_functions.begin(),
@@ -196,6 +226,9 @@ bool LbrPass::runOnFunction(Function &F)
 
     	  vector<Value *> epilogue_args;
     	  epilogue_args.push_back(frame_address);
+#ifdef    INCLUDE_EXTENDED_MEASUREMENTS
+    	  epilogue_args.push_back(pa);
+#endif
     	  CallInst* epilogue_address = CallInst::Create(epilogue, epilogue_args, "", ret_ins);
 
     	  if (epilogue_address == NULL)
@@ -301,11 +334,14 @@ void LbrPass::getEpilogue(Module *M)
     Type *arg1 = Type::getInt8PtrTy(M->getContext(), 0);
 
     argument_type.push_back(arg1);
+#ifdef INCLUDE_EXTENDED_MEASUREMENTS
+    Type *arg2 = Type::getInt64PtrTy(M->getContext(), 0);
+    argument_type.push_back(arg2);
+#endif
 
     FunctionType* epilogue_type = FunctionType::get(return_type, argument_type, false);
 
     Constant* c = M->getOrInsertFunction("lbr_epilogue", epilogue_type);
-
 
     if ((epilogue = cast<Function>(c)) == NULL)
     {

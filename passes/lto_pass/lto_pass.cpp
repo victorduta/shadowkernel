@@ -25,107 +25,39 @@ namespace llvm {
 
     bool LtoPass::runOnModule(Module &M)
     {
-    	doInit();
-    	for (auto curFref = M.getFunctionList().begin(),
-    	              endFref = M.getFunctionList().end();
-    	              curFref != endFref; ++curFref)
-    	{
-    		     Function *function = &(*curFref);
-    		     runOnFunction(*function);
-
-    	}
     	int i = 0;
-    	int callsiteSize = directCalls.size();
-    	outs() << "We have to inline " << callsiteSize << " callsites\n";
-	    for(vector<CallInst*>::iterator it = directCalls.begin(),
-	    		 et = directCalls.end(); it != et; ++it)
-	    {
-	    	 outs() << "Element " << ++i << "|"<< callsiteSize << " from function " << (*it)->getParent()->getParent()->getName() <<"\n";
-	    	 (*it)->print(outs() << "\n");
-	         InlineFunctionInfo info = InlineFunctionInfo(NULL);
-	         InlineFunction(CallSite(*it), info);
-	    }
+    	for (auto iterator = functions.begin(),
+             end_iterator = functions.end(); iterator != end_iterator; ++iterator)
+        	{
+    		      Function *F = M.getFunction(*iterator);
+    		      if (F != nullptr)
+    		      {
+    		    	  i = 0;
+    		    	  for(auto user: F->users())
+    		    	  {
+    		    		  CallInst* I;
+    		    	      if((I = dynamic_cast<CallInst*>(user)) != nullptr)
+    		    	      {
+                              //I->print(outs());
+    		    	    	  InlineFunctionInfo info = InlineFunctionInfo(NULL);
+    		    	    	  if (!InlineFunction(CallSite(I), info))
+    		    	    	  {
+    		    	    		  outs() << "Error while inlining\n";
+    		    	    	  }
+    		    	    	  else
+    		    	    	  {
+    		    	    		 i++;
+    		    	    	  }
+    		    	      }
+    		    	  }
+    		    	  outs() << *iterator << "|" << i << "\n";
+    		      }
+    		      else
+    		      {
+    		    	  outs() << "Error 1:Cannot find function " << *iterator << " in module\n";
+    		      }
+        	}
     	return true;
-    }
-
-    void LtoPass::runOnFunction(Function &F)
-    {
-    	//F.print(outs() << "\n");
-
-    	/* We to a DFS search. So mark the function as traced before we actually
-    	 * do inlining of its content
-    	 */
-    	if (traced.count(F.getName()) > 0)
-    	{
-    		outs() << "We already tracked "+ F.getName() << "\n";
-    		return;
-    	}
-    	if (F.isIntrinsic())
-    	{
-    		outs() << "Don't track llvm intrinsics " << "\n";
-    		traced[F.getName()] = 1;
-    		return;
-    	}
-    	traced[F.getName()] = 1;
-    	tracedFunctions++;
-    	outs() << "We will track "+ F.getName()+ " :" << tracedFunctions << "\n";
-    	//outs() << "We must track function " + F.getName() << "\n";
-
-    	for(Function::iterator f_begin= F.begin(),
-    			 f_end = F.end(); f_begin != f_end; ++f_begin)
-    	{
-    		BasicBlock *block = &(*f_begin);
-
-    		//block->print(outs() << "\n");
-
-    		for(BasicBlock::iterator b_iterator = block->begin(),
-    				b_end = block->end(); b_iterator != b_end; ++b_iterator)
-    		{
-    			if (isa<CallInst>(b_iterator))
-    			{
-    				Instruction *i = &(*b_iterator);
-    				CallInst *callinstr =  dyn_cast<CallInst>(i);
-    				Function *calee;
-    				//callinstr.print(outs()<< "\n");
-
-    				/* We have a direct call here, check if we track this call
-    				 * and in that case inline it.
-    				 */
-    				if ((calee = callinstr->getCalledFunction()) != nullptr)
-    				{
-                        if (tracked.count(calee->getName()) > 0)
-                        {
-
-                            if (traced.count(calee->getName()) != 0)
-                            {
-                                 runOnFunction(*calee);
-                            }
-                            directCalls.push_back(callinstr);
-                            //callinstr->print(outs());
-                            //outs() << "----- pushing callsite for inlining\n";
-
-                        }
-                        //callinstr->print(outs());
-                        //outs() << "---- direct call\n";
-    				}
-    				else
-    				{
-    					//callinstr->print(outs());
-    					//outs() << "---- indirect call\n";
-    				}
-
-    				/* TODO implement indirect call logic here*/
-    			}
-    		}
-    	}
-    }
-    void LtoPass::doInit()
-    {
-    	for (vector<string>::const_iterator it = expensive_functions.begin(),
-    			et = expensive_functions.end(); it != et; ++it)
-    	{
-                tracked[*(it)] = 1;
-    	}
     }
 
     char LtoPass::ID = 0;
