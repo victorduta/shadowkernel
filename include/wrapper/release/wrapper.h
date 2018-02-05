@@ -20,7 +20,7 @@ typedef struct address_entry {
 
 #define NUM_ENTRIES 5000
 #define NUM_UNITS 8
-#define NUM_FROM 100
+#define NUM_FROM 200
 
 typedef struct from_entry{
   unsigned long long tos;
@@ -28,6 +28,7 @@ typedef struct from_entry{
   unsigned long long to;
   unsigned long long address;
   unsigned long long nhits;
+  unsigned long long sig;
 } from_entry;
 
 typedef struct address_entry {

@@ -12,6 +12,7 @@ string epilogue_name = "lbr_epilogue";
 #define LBR_INCLUDE_INLINE
 //#define LBR_PADD_CALLS
 
+
 #ifdef LBR_DEBUG_INFO
 //#define LBR_DEBUG_INFO_EXTENDED
 #endif
@@ -32,7 +33,7 @@ vector<string> global_variables = {"check_wrapper"};
 #endif
 
 #ifdef LBR_RELEASE
-vector<string> global_functions = {"lbr_epilogue" };
+vector<string> global_functions = { "lbr_epilogue", "getXXSignature", "setXXSignature" };
 vector<string> global_variables = {"add_lbr_entry"};
 #warning Building LBR RELEASE PASS
 #endif

@@ -15,8 +15,11 @@
 #include "wrapper.h"
 
 
-
+#if  !defined(INCLUDE_EXTENDED_MEASUREMENTS) || defined(SKIP_INSTRUMENTATION)
 void __attribute__((weak)) lbr_epilogue(void* addr);
+#else
+void __attribute__((weak)) lbr_epilogue(void* addr,  unsigned long long* sig);
+#endif
 
 #ifndef INCLUDE_MEASURE_INSTRUMENTATION
 void lbr_epilogue(void *frame)
@@ -53,7 +56,11 @@ void lbr_epilogue(void *frame)
 #endif
 }
 #else
+#if  !defined(INCLUDE_EXTENDED_MEASUREMENTS) || defined(SKIP_INSTRUMENTATION)
 void lbr_epilogue(void *frame)
+#else
+void lbr_epilogue(void *frame,  unsigned long long* sig)
+#endif
 { 
 
 #if !defined(SKIP_SCRIPT_INSTRUMENTATION) && !defined(SKIP_INSTRUMENTATION)
@@ -61,6 +68,7 @@ void lbr_epilogue(void *frame)
    struct address_entry entry;
 #else
    struct from_entry entry;
+   entry.sig = *sig;
 #endif
    unsigned long long *address_slot = (unsigned long long*)((char *)frame+8);
    

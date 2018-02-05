@@ -54,6 +54,20 @@ void add_lbr_entry_default(struct address_entry *entry)
    put_cpu();
 }
 #else
+unsigned long long getXXSignature()
+{
+   return current->xxx_profile;
+}
+
+EXPORT_SYMBOL(getXXSignature);
+
+void setXXSignature(unsigned long long value)
+{
+   current->xxx_profile = value;
+}
+
+EXPORT_SYMBOL(setXXSignature);
+
 void add_lbr_entry_default(struct from_entry *entry)
 {
    int i, cpu, j;
@@ -73,10 +87,11 @@ void add_lbr_entry_default(struct from_entry *entry)
                      break;
                 }
           }
-          if ((j ==  lbr_entries[i].from_length) && (lbr_entries[i].from_length <= NUM_FROM))
+          if ((j ==  lbr_entries[i].from_length) && (lbr_entries[i].from_length < NUM_FROM))
           {
              lbr_entries[i].from_length++;
              lbr_entries[i].from[j].from = entry->from;
+             lbr_entries[i].from[j].sig =  entry->sig;
              lbr_entries[i].from[j].nhits = 1;    
           }
            
@@ -87,6 +102,7 @@ void add_lbr_entry_default(struct from_entry *entry)
            lbr_entries[i].tos = entry->tos;
            lbr_entries[i].from[0].from = entry->from;
            lbr_entries[i].from[0].nhits = 1;
+           lbr_entries[i].from[0].sig = entry->sig;
            lbr_entries[i].from_length = 1;
            lbr_entries[i].to = entry->to;
            lbr_entries[i].address= entry->address;
