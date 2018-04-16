@@ -497,7 +497,7 @@ lto_vmlinux_link_ver2()
         #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
 }
 LTO_GLOBAL_VMLINUX_INIT=
-lto_modpost_link()
+lto_modpost_link_FINAL()
 {
         local intermediate_array
         local LTO_KBUILD_VMLINUX_INIT
@@ -553,6 +553,8 @@ lto_modpost_link()
         LTO_INTERMEDIATE_BC_TO_O=`replace_suffix intermediate_array[@] .o .int_o`
         
         intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}  ${LTO_KBUILD_VMLINUX_INIT}`);
+
+        if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
 	symbols=`get_nm_files intermediate_array[@]`
         symbols=`get_undefined_symbols`
         
@@ -562,35 +564,247 @@ lto_modpost_link()
         rm -f begin.o
 	${AR} rcsD empty.o
 	${LD} -m elf_x86_64 ${symbols} -r -o begin.o empty.o
+      
+        fi # END !(LTO_DEBUG)
         
         for i in ${LTO_KBUILD_VMLINUX_INIT}
         do
+            if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+
             ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${i//.bc/.s_int} ${i}
             ${AS} --64 -o ${i//.bc/.o_int} ${i//.bc/.s_int}
+
+            fi # END !(LTO_DEBUG)
+
 	    vmlinux_init_array[$counter]=${i//.bc/.o_int}
             #rm -f ${i//.bc/.s_int}
             let counter=counter+1
         done
         LTO_KBUILD_VMLINUX_INIT=$(echo "${vmlinux_init_array[@]}")
 
- 
+        if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+
         ${LD} ${LDFLAGS} ${LTO_EXTRA_VMLINUX} -r -o ${LTO_OUTPUT_FILE} begin.o                   \
 		 --start-group ${LTO_KBUILD_VMLINUX_MAIN} --end-group
-
+        
+        fi # END !(LTO_DEBUG)
 
         if [ "${LTO_DECORATE}" == "True" ]; then
                  ${LTO_OPT} ${LTO_EXTRA_OPT_DECORATE_FLAGS} -o  aux_kernel.bc  ${LTO_OUTPUT_FILE}
                  ${LTO_DIS} aux_kernel.bc
                  #cat decorated_kernel.ll| grep -A 1 setXXSignature | tr -d "\-\-" | sed '/^$/d' > dump_markers_kernel
-                 awk '($1 ~ /^define$/){parent=$0} ($3 ~ /^@setXXSignature\(i64$/){signature=$0; getline; print parent"||||"signature"||||"$0}' aux_kernel.ll > dump_markers_kernel
+                 awk '($1 ~ /^define$/){parent=$0;count=0} ($3 ~ /^@setXXSignature\(i64$/){signature=$0; getline; print parent"||||"signature"||||"$0"||||"count;count++}' aux_kernel.ll > dump_markers_kernel
                  ${LTO_OPT} ${LTO_EXTRA_OPT_MARKER_FLAGS} -o  decorated_kernel.bc  aux_kernel.bc
                        
         else
 		cp  ${LTO_OUTPUT_FILE} decorated_kernel.bc
         fi
 
+
         if [ "${LTO_INLINE}" == "True" ]; then
-                 ${LTO_OPT} ${LTO_EXTRA_OPT_FLAGS} -o  kernel.bc  decorated_kernel.bc >  dump_calls_kernel       
+                 # Inline in a loop as this sometimes fails
+                 while true; do
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_INLINE_FLAGS} -o  kernel.bc  decorated_kernel.bc >  dump_inline_stats 
+
+                 if [ $? -eq 0 ]; then
+                      break
+                 fi
+                 done     
+        else
+		cp  decorated_kernel.bc kernel.bc
+        fi
+        
+        ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${LTO_ASSEMBLY_FILE} kernel.bc
+	${AS} --64 -o ${LTO_INTERMEDIATE_BC_TO_O} ${LTO_ASSEMBLY_FILE}
+
+        cp ${LTO_INTERMEDIATE_BC_TO_O} kernel.object
+
+        LTO_GLOBAL_VMLINUX_INIT=${LTO_KBUILD_VMLINUX_INIT}
+
+        ${LTO_LD} ${LDFLAGS} -r -o ${1} ${LTO_PARTIAL_VMLINUX_INIT} ${LTO_KBUILD_VMLINUX_INIT}              \
+		--start-group  ${KBUILD_VMLINUX_MAIN} kernel.object --end-group
+
+        #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
+        
+}
+
+lto_vmlinux_link_FINAL()
+{
+        local intermediate_array
+        local LTO_KBUILD_VMLINUX_INIT
+	local LTO_KBUILD_VMLINUX_MAIN
+        local LTO_OUTPUT_FILE
+        local LTO_PARTIAL_VMLINUX_INIT
+        local LTO_PARTIAL_VMLINUX_MAIN
+        local LTO_PARTIAL_OUTPUT_FILE
+        local LTO_LIBRARIES
+        local KBUILD_VMLINUX_MAIN_AUX
+        local LTO_ASSEMBLY_FILE
+        local LTO_INTERMEDIATE_BC_TO_O
+        local aux_array_1
+        local aux_array_2
+        local aux_string
+        local symbols
+        local vmlinux_init_array
+        local counter=0
+
+        #KBUILD_VMLINUX_MAIN_AUX=${KBUILD_VMLINUX_MAIN}
+        #intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        #LTO_LIBRARIES=`get_matching_suffix intermediate_array[@] .a`
+        #aux_array_1=(`echo ${LTO_LIBRARIES}`);
+        #KBUILD_VMLINUX_MAIN=`get_intersection intermediate_array[@] aux_array_1[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`get_existing_files intermediate_array[@]`
+
+        aux_array_1=(`echo ${KBUILD_VMLINUX_INIT}`);
+        aux_array_2=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        aux_string=`replace_suffix aux_array_2[@] .bc .o`
+        aux_array_2=(`echo ${aux_string}`);
+        LTO_PARTIAL_VMLINUX_INIT=`get_intersection aux_array_1[@] aux_array_2[@]`
+
+        for i in ${LTO_KBUILD_VMLINUX_INIT}
+        do
+            if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+
+            ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${i//.bc/.s_int} ${i}
+            ${AS} --64 -o ${i//.bc/.o_int} ${i//.bc/.s_int}
+
+            fi # END !(LTO_DEBUG)
+
+	    vmlinux_init_array[$counter]=${i//.bc/.o_int}
+            #rm -f ${i//.bc/.s_int}
+            let counter=counter+1
+        done
+        LTO_KBUILD_VMLINUX_INIT=$(echo "${vmlinux_init_array[@]}")
+
+
+      	${LTO_LD} ${LDFLAGS} ${LDFLAGS_vmlinux} -o ${1}                  \
+			-T ${lds} ${LTO_PARTIAL_VMLINUX_INIT} ${LTO_KBUILD_VMLINUX_INIT}                   \
+			--start-group ${KBUILD_VMLINUX_MAIN} kernel.object  --end-group ${2}
+
+        #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
+}
+
+
+lto_modpost_link()
+{
+        local intermediate_array
+        local LTO_KBUILD_VMLINUX_INIT
+	local LTO_KBUILD_VMLINUX_MAIN
+        local LTO_OUTPUT_FILE
+        local LTO_PARTIAL_VMLINUX_INIT
+        local LTO_PARTIAL_VMLINUX_MAIN
+        local LTO_PARTIAL_OUTPUT_FILE
+        local LTO_LIBRARIES
+        local KBUILD_VMLINUX_MAIN_AUX
+        local LTO_ASSEMBLY_FILE
+        local LTO_INTERMEDIATE_BC_TO_O
+        local aux_array_1
+        local aux_array_2
+        local aux_string
+        local symbols
+        local vmlinux_init_array
+        local counter=0
+        local fix_kernel
+
+        KBUILD_VMLINUX_MAIN_AUX=${KBUILD_VMLINUX_MAIN}
+        intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        LTO_LIBRARIES=`get_matching_suffix intermediate_array[@] .a`
+        aux_array_1=(`echo ${LTO_LIBRARIES}`);
+        #KBUILD_VMLINUX_MAIN=`get_intersection intermediate_array[@] aux_array_1[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        LTO_KBUILD_VMLINUX_INIT=`get_existing_files intermediate_array[@]`
+
+        aux_array_1=(`echo ${KBUILD_VMLINUX_INIT}`);
+        aux_array_2=(`echo ${LTO_KBUILD_VMLINUX_INIT}`);
+        aux_string=`replace_suffix aux_array_2[@] .bc .o`
+        aux_array_2=(`echo ${aux_string}`);
+        LTO_PARTIAL_VMLINUX_INIT=`get_intersection aux_array_1[@] aux_array_2[@]`
+
+        intermediate_array=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`replace_suffix intermediate_array[@] .o .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`replace_suffix intermediate_array[@] .a .bc`
+        intermediate_array=(`echo ${LTO_KBUILD_VMLINUX_MAIN}`);
+        LTO_KBUILD_VMLINUX_MAIN=`get_existing_files intermediate_array[@]`
+
+        #aux_array_1=(`echo ${KBUILD_VMLINUX_MAIN}`);
+        #aux_array_2=(`echo ${LTO_KBUILD_VMLINUX_MAIN}`);
+        #aux_string=`replace_suffix aux_array_2[@] .bc .o`
+        #aux_array_2=(`echo ${aux_string}`);
+        #LTO_PARTIAL_VMLINUX_MAIN=`get_intersection aux_array_1[@] aux_array_2[@]`
+
+        intermediate_array=(`echo ${1}`);
+        LTO_OUTPUT_FILE=`replace_suffix intermediate_array[@] .o .int_bc`
+        LTO_PARTIAL_OUTPUT_FILE=`replace_suffix intermediate_array[@] .o .int`
+        LTO_ASSEMBLY_FILE=`replace_suffix intermediate_array[@] .o .int_s`
+        LTO_INTERMEDIATE_BC_TO_O=`replace_suffix intermediate_array[@] .o .int_o`
+        
+        intermediate_array=(`echo ${KBUILD_VMLINUX_INIT}  ${LTO_KBUILD_VMLINUX_INIT}`);
+
+        if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+	symbols=`get_nm_files intermediate_array[@]`
+        symbols=`get_undefined_symbols`
+        
+        fix_kernel=`fix_kernel_builtin`
+
+        rm -f empty.o
+        rm -f begin.o
+	${AR} rcsD empty.o
+	${LD} -m elf_x86_64 ${symbols} -r -o begin.o empty.o
+      
+        fi # END !(LTO_DEBUG)
+        
+        for i in ${LTO_KBUILD_VMLINUX_INIT}
+        do
+            if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+
+            ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${i//.bc/.s_int} ${i}
+            ${AS} --64 -o ${i//.bc/.o_int} ${i//.bc/.s_int}
+
+            fi # END !(LTO_DEBUG)
+
+	    vmlinux_init_array[$counter]=${i//.bc/.o_int}
+            #rm -f ${i//.bc/.s_int}
+            let counter=counter+1
+        done
+        LTO_KBUILD_VMLINUX_INIT=$(echo "${vmlinux_init_array[@]}")
+
+        if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+
+        ${LD} ${LDFLAGS} ${LTO_EXTRA_VMLINUX} -r -o ${LTO_OUTPUT_FILE} begin.o                   \
+		 --start-group ${LTO_KBUILD_VMLINUX_MAIN} --end-group
+        
+        fi # END !(LTO_DEBUG)
+
+        if [ "${LTO_DECORATE}" == "True" ]; then
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_DECORATE_FLAGS} -o  aux_kernel.bc  ${LTO_OUTPUT_FILE}
+                 ${LTO_DIS} aux_kernel.bc
+                 #cat decorated_kernel.ll| grep -A 1 setXXSignature | tr -d "\-\-" | sed '/^$/d' > dump_markers_kernel
+                 awk '($1 ~ /^define$/){parent=$0;count=0} ($3 ~ /^@setXXSignature\(i64$/){signature=$0; getline; print parent"||||"signature"||||"$0"||||"count;count++}' aux_kernel.ll > dump_markers_kernel
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_MARKER_FLAGS} -o  decorated_kernel.bc  aux_kernel.bc
+                       
+        else
+		cp  ${LTO_OUTPUT_FILE} decorated_kernel.bc
+        fi
+
+
+        if [ "${LTO_INLINE}" == "True" ]; then
+                 # Inline in a loop as this sometimes fails
+                 while true; do
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_INLINE_FLAGS} -o  inlined_kernel.bc  decorated_kernel.bc >  dump_inline_stats 
+
+                 if [ $? -eq 0 ]; then
+                      break
+                 fi
+                 done  
+                 ${LTO_OPT} ${LTO_EXTRA_OPT_REINSTRUMENT_FLAGS} -o  kernel.bc  inlined_kernel.bc >  dump_reinstrument_stats 
         else
 		cp  decorated_kernel.bc kernel.bc
         fi
@@ -648,8 +862,13 @@ lto_vmlinux_link()
 
         for i in ${LTO_KBUILD_VMLINUX_INIT}
         do
+            if [ "${LTO_DEBUG}" != "True" ]; then # BEGIN !(LTO_DEBUG)
+
             ${LLC} -O2 ${LTO_EXTRA_LLC_FLAGS} -o ${i//.bc/.s_int} ${i}
             ${AS} --64 -o ${i//.bc/.o_int} ${i//.bc/.s_int}
+
+            fi # END !(LTO_DEBUG)
+
 	    vmlinux_init_array[$counter]=${i//.bc/.o_int}
             #rm -f ${i//.bc/.s_int}
             let counter=counter+1
@@ -663,7 +882,6 @@ lto_vmlinux_link()
 
         #KBUILD_VMLINUX_MAIN=${KBUILD_VMLINUX_MAIN_AUX}
 }
-
 
 # Nice output in kbuild format
 # Will be supressed by "make -s"

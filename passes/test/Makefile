@@ -2,6 +2,8 @@
 ROOT=../..
 
 include $(ROOT)/Makefile.inc
+include Makefile.passes
+
 CFLAGS= -include epilogue.h -Xclang -load -Xclang $(INSTALL_PASS_DIR)/lbr_pass.so
 OBJS=test_1.c
 
@@ -20,7 +22,7 @@ symbol_undefined=$(foreach sym,$(symbol_list),-u $(sym))
 all: clean test_1.plain
 
 %.o: %.c
-	$(CXX) $(CFLAGS) $(KERNELARGS) -fpad-calls -o $@ $<
+	$(CXX) $(CFLAGS) -O2 -o $@ $<
 %.plain: %.c
 	$(CXX) -fpad-calls -c -fno-optimize-sibling-calls -O2  -o  $@ $<
 %.ll: %.c
@@ -190,10 +192,10 @@ test_linker:
 	
 llc:
 	llvm-as < /dev/null | $(LLC)  -mattr=help
-lto_test:
+lto_test_main:
 	#$(LD) -m elf_x86_64  -r -o test_link1.o -plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=O2  -plugin-opt=emit-llvm -plugin-opt=-time-passes test_link_lto_a.o test_link_lto_b.o test_link_lto_c.o
 	$(LD) -m elf_x86_64  -r -o test_link1.o -plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=-help  -plugin-opt=emit-llvm -plugin-opt=-time-passes test_link_lto_a.o test_link_lto_b.o test_link_lto_c.o
-clean:
+clean:  clean_lto
 	cp vmlinux.bc vmlinux.bc1
 	cp vmlinux.o vmlinux.o1
 	rm -f *.bc *.o *.s *.plain *.ll run_link test_link a.o main.o *.x

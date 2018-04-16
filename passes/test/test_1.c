@@ -202,22 +202,18 @@ void test_alloca_var()
    printf("%c", c);
    printf("%d",*p);
 }
-extern unsigned int us;
 void test_alloca_array()
 {
    unsigned int v[100][200];
    unsigned int mor;
-   v[2][3] = 0;
-   memset(v, 2, us);
+ 
+  
 
    for (int i = 0 ; i < 23; i++)
    {
       mor+= v[i][2];
    }
-   if (mor != us)
-   {
-       return;
-   }
+
    printf("%d", v[2][4]);
    
    if (v[2][5] != 3)
@@ -237,6 +233,7 @@ int main()
   //mem[99] = normal_function_not_complex;
   int (*foos)(int) = normal_function_s_complex;
   int ve[10] = {1 , 3, 4 , 9, 7 , 19, 3, 4, 5, 10};
+  unsigned long long vsdsd;
   start_value = normal_function_not_complex(start_value);
   start_value = normal_function_s_complex(start_value);
   start_value = inlinable_function(start_value);

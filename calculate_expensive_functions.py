@@ -11,19 +11,22 @@ branch_max = 200
 profile_weigth = 0
 total_weigth = 0
 pruned = 0
-degree = 0.95
+degree = 0.998
 
 mapSize = 0
 objectSize = 0
 markerSize = 0
 
+extension = '_withLibs'
+
 os.environ['KERNEL_VERSION'] = '4.4.17'
 os.environ['KERNEL_DIR'] = 'llvm-kernel/' 
-os.environ['KERNEL_MAP'] = 'System.map-'+os.environ['KERNEL_VERSION']
-os.environ['KERNEL_DUMP'] = 'vmlinux_dump'
+os.environ['KERNEL_MAP'] = 'System.map-'+os.environ['KERNEL_VERSION']+extension
+os.environ['KERNEL_DUMP'] = 'vmlinux_dump'+extension
 os.environ['PROFILING_DIR'] = os.environ['KERNEL_DIR']+'debug/profiling/'
 os.environ['EXCESS_FILE'] = os.environ['PROFILING_DIR']+'excess_files'
 os.environ['HEADER_FILE'] = os.environ['PROFILING_DIR']+'profiling_header.h'
+os.environ['HEADER_FILE_DINAMIC'] = os.environ['PROFILING_DIR']+'profiling_header_dinamic.h'
 os.environ['EXCLUDE_FILE'] = os.environ['PROFILING_DIR']+'exclude_header.h'
 
 
@@ -44,7 +47,7 @@ def mapMarkerData(filename):
       index_2 = elements[1].index(")")
       index_p1 = elements[0].index("@")
       index_p2 = elements[0].index("(")
-      touple = (elements[1][index_1+19:index_2].strip() , elements[0][index_p1+1:index_p2], elements[2].strip())
+      touple = (elements[1][index_1+19:index_2].strip() , elements[0][index_p1+1:index_p2], elements[2].strip(), int(elements[3]))
       #print touple
       markerData.append(touple) 
   markerSize = len(markerData)
@@ -52,7 +55,7 @@ def mapMarkerData(filename):
 
 def load_system_map():
   global mapSize
-  inputFile = open('./'+os.environ['KERNEL_DIR']+os.environ['KERNEL_MAP'])
+  inputFile = open('./'+os.environ['PROFILING_DIR']+os.environ['KERNEL_MAP'])
   for line in inputFile:
       elements = line.strip().split(" ")
       touple = (elements[0], elements[1], elements[2]) # Represents a system map entry ADDRESS TYPE NAME
@@ -70,7 +73,7 @@ def analyse_signature(call_signature):
 # At this time this will only include call instructions
 def load_object_map(instruction_filter):
   global objectSize
-  inputFile = open('./'+os.environ['KERNEL_DIR']+os.environ['KERNEL_DUMP'])
+  inputFile = open('./'+os.environ['PROFILING_DIR']+os.environ['KERNEL_DUMP'])
   for line in inputFile:
       elements = line.replace("\t"," ").strip().split(":")
       if len(elements) >= 2:
@@ -170,12 +173,12 @@ def translateToAnalysisTouple(touple):
     call_site = touple[2]
     
     if parent[0] == '__brk_limit': # TODO find a better way for this
-       return (child, parent, call_site, touple[3], '', '')
+       return (child, parent, call_site, touple[3], '', '', 0)
     signature = get_object_signature(call_site)
     marker = get_object_marker(touple[4])
     if marker[1] not in parent:
-       return (child, parent, call_site, touple[3], signature[1], 'unknown')
-    return (child, parent, call_site, touple[3], signature[1], marker[2])
+       return (child, parent, call_site, touple[3], signature[1], 'unknown', 0)
+    return (child, parent, call_site, touple[3], signature[1], marker[2], marker[3])
 
 def checkAnalysisTouples(profiles):
     for elem in profiles:
@@ -229,6 +232,7 @@ def writeStruct(out, elements):
     out.write(" ")
     for element in elements[1:]:
         out.write(",")
+        out.write("\n")
         writeElement(out, element)
         out.write(" ")
     out.write("}")
@@ -247,6 +251,7 @@ def writeElement(out, element):
        writeStruct(out, element)
        return
 
+
 def writeStructDefinition(out):
      out.write('struct analysis_struct {\
        vector<string> function_aliases;\
@@ -255,17 +260,38 @@ def writeStructDefinition(out):
        unsigned long long weigth;\
        string type;\
        string assembly_format;\
+       unsigned int index;\
+       bool visited;\
        \
-       analysis_struct(vector<string> function_aliases,  vector<string> parent_aliases, string signature, unsigned long long weigth, string type, string assembly_format){\
+       analysis_struct(vector<string> function_aliases,  vector<string> parent_aliases, string signature, unsigned long long weigth, string type, string assembly_format, unsigned int index){\
            this->function_aliases = function_aliases;\
            this->parent_aliases = parent_aliases;\
            this->callsite_signature = signature;\
            this->weigth = weigth;\
            this->type = type;\
            this->assembly_format = assembly_format;\
+           this->index = index;\
+           this->visited = false;\
        }\
      };')
 
+def parserWriteDinamic(element):
+    out = open('./'+os.environ['HEADER_FILE_DINAMIC'], 'w')
+    writeStructDefinition(out)
+    out.write("\n")
+    out.write("\n")
+    out.write("static vector<analysis_struct> profileVector;")
+    out.write("\n")
+    out.write("\n")
+    out.write("static void createProfilingVector(){")
+    out.write("\n")
+    for elem in element:
+        out.write("profileVector.push_back(")
+        writeElement(out,elem)
+        out.write(");")
+        out.write("\n")
+    out.write("}")
+    out.close()
 
 def parserWrite(element):
     out = open('./'+os.environ['HEADER_FILE'], 'w')
@@ -283,7 +309,8 @@ def excludeWrite(profiles):
     out.write("vector<string> excludeVector = ")
     for elem in profiles:
         for bans in elem[0]:
-            aux.append(bans)
+            if bans not in aux:
+               aux.append(bans)
     writeElement(out, aux)
     out.write(";")
     out.close()
@@ -324,6 +351,7 @@ def main():
   parserWrite(analysisTouple[0: (len(analysisTouple) - pruned)])
   debugWrite(analysisTouple[0: (len(analysisTouple) - pruned)])
   excludeWrite(analysisTouple[0: (len(analysisTouple) - pruned)])
+  parserWriteDinamic(analysisTouple[0: (len(analysisTouple) - pruned)])
 
 def test():
   mapMarkerData(sys.argv[2])

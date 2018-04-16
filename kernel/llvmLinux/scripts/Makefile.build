@@ -406,6 +406,28 @@ ifdef lib-target
 quiet_cmd_link_l_target = AR      $@
 cmd_link_l_target = rm -f $@; $(AR) rcs$(KBUILD_ARFLAGS) $@ $(lib-y)
 
+ifeq ($(HAVE_LTO),True)
+
+lto_filter = $(strip $(subst ./,,$(foreach lto_file, $(subst .o,.bc,$(strip $(lib-y))),  $(wildcard ./$(lto_file)))))
+
+ifeq ($(patsubst arch/x86/lib/clear_page_64.o,xxxxxx,$(lib-y)),$(lib-y))
+else
+lto_filter =
+endif
+
+ifeq ($(lto_filter),)
+cmd_link_l_target = rm -f $@; $(AR) rcs$(KBUILD_ARFLAGS) $@ $(lib-y)
+else
+cmd_link_l_target = $(if $(strip $(lib-y)),\
+                      $(if $(strip $(filter-out $(subst .bc,.o,$(strip $(subst ./,,$(foreach lto_file, $(subst .o,.bc,$(lib-y)), $(wildcard ./$(lto_file)))))),$(lib-y))),\
+		       rm -f $@; $(AR) rcs$(KBUILD_ARFLAGS) $@ $(strip $(filter-out $(subst .bc,.o,$(strip $(subst ./,,$(foreach lto_file, $(subst .o,.bc,$(lib-y)), $(wildcard ./$(lto_file)))))),$(lib-y))) \
+		      ; $(LD) $(LTO_EXTRA_LD_FLAGS) $(ld_flags) -r -o $(subst .a,.bc,$@) $(strip $(subst ./,,$(foreach lto_file, $(subst .o,.bc,$(lib-y)),  $(wildcard ./$(lto_file))))),\
+                      rm -f $@; $(AR) rcs$(KBUILD_ARFLAGS) $@; $(LD) $(LTO_EXTRA_LD_FLAGS) $(ld_flags) -r -o $(subst .a,.bc,$@) $(strip $(subst ./,,$(foreach lto_file, $(subst .o,.bc,$(lib-y)),  $(wildcard ./$(lto_file)))))),\
+                      rm -f $@; $(AR) rcs$(KBUILD_ARFLAGS) $@)
+endif
+
+endif
+
 $(lib-target): $(lib-y) FORCE
 	$(call if_changed,link_l_target)
 

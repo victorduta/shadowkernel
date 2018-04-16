@@ -75,8 +75,7 @@ LTO_EXTRA_VMLINUX=LTO_EXTRA_VMLINUX="-plugin /home/victor/Disertation/Workplace/
 LTO_EXTRA_C_FLAGS=LTO_EXTRA_C_FLAGS="-flto"
 LTO_EXTRA_LD_FLAGS=LTO_EXTRA_LD_FLAGS="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=O0 -plugin-opt=emit-llvm"
 LTO_EXTRA_VMLINUX_FINAL=LTO_EXTRA_VMLINUX_FINAL="-plugin /home/victor/Disertation/Workplace/tools/bin/bin/../lib/LLVMgold.so -plugin-opt=-code-model=kernel -plugin-opt=O0"
-LTO_EXTRA_LLC_FLAGS=LTO_EXTRA_LLC_FLAGS="-code-model=kernel  -disable-tail-calls  -disable-fp-elim"
-LTO_EXTRA_OPT_FLAGS=LTO_EXTRA_OPT_FLAGS="-load=$(INSTALL_PASS_DIR)/lto_pass.so  -lto_inline" 
+LTO_EXTRA_LLC_FLAGS=LTO_EXTRA_LLC_FLAGS="-code-model=kernel  -disable-tail-calls  -disable-fp-elim" 
 
 LTO_LD=LTO_LD=$(DEFAULT_LD)
 LTO_DIS=LTO_DIS=$(LLVM_DIS)
@@ -89,6 +88,16 @@ endif
 
 ifeq ($(ACTIVATE_LTO_INLINING),True)
 LTO_INLINE=LTO_INLINE=True
+LTO_EXTRA_OPT_INLINE_FLAGS=LTO_EXTRA_OPT_INLINE_FLAGS="-load=$(INSTALL_PASS_DIR)/inline_pass.so  -lto_inline"
+LTO_FLAGS += $(LTO_INLINE)
+LTO_FLAGS += $(LTO_EXTRA_OPT_INLINE_FLAGS)
+LTO_FLAGS += LTO_EXTRA_OPT_REINSTRUMENT_FLAGS="-load=$(INSTALL_PASS_DIR)/reinstrument_lbr.so -lto_lbr_instrument"
+endif
+
+
+ifeq ($(ACTIVATE_LTO_DEBUG),True)
+LTO_DEBUG=LTO_DEBUG=True
+LTO_FLAGS += $(LTO_DEBUG)
 endif
 
 ifeq ($(INCLUDE_EXTENDED_MEASUREMENTS),True)
@@ -96,6 +105,7 @@ LTO_DECORATE=LTO_DECORATE=True
 LTO_EXTRA_OPT_DECORATE_FLAGS=LTO_EXTRA_OPT_DECORATE_FLAGS="-load=$(INSTALL_PASS_DIR)/decorate_pass.so -lto_decorate"
 LTO_EXTRA_OPT_MARKER_FLAGS=LTO_EXTRA_OPT_MARKER_FLAGS="-load=$(INSTALL_PASS_DIR)/lto_pass.so  -lto_inline" 
 endif
+
 
 #CONFIG_TARGETS+=lto_config
 
@@ -152,7 +162,7 @@ $(patsubst %,build_kernel_%,$(DIRS)): KLDFLAGS = $($(DIR)_KLDFLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): PER_FILE_FLAGS = $($(DIR)_PER_FILE_FLAGS)
 $(patsubst %,build_kernel_%,$(DIRS)): REDIRECT_BUILD_KERNEL = $($(DIR)_REDIRECT_BUILD_KERNEL)
 $(patsubst %,build_kernel_%,$(DIRS)):
-	$(MAKE) -C $(DIR) LLVM_NM=$(LLVM_NM) LLC=$(LLC) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD) HAVE_LTO=$(LTO_ENABLED) $(LTO_LD) $(LTO_DIS) $(LTO_AS) $(LTO_OPT) $(LTO_EXTRA_VMLINUX) $(LTO_EXTRA_VMLINUX_FINAL) $(LTO_EXTRA_C_FLAGS) $(LTO_EXTRA_LD_FLAGS) $(LTO_EXTRA_LLC_FLAGS) $(LTO_EXTRA_OPT_FLAGS) $(LTO_EXTRA_OPT_DECORATE_FLAGS) $(LTO_EXTRA_OPT_MARKER_FLAGS) $(LTO_INLINE) $(LTO_DECORATE) $(PER_FILE_FLAGS) KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
+	$(MAKE) -C $(DIR) LLVM_NM=$(LLVM_NM) LLC=$(LLC) CC=$(CXX) HOSTCC=$(CXX) AS=$(AS) LD=$(LD) HAVE_LTO=$(LTO_ENABLED) $(LTO_LD) $(LTO_DIS) $(LTO_AS) $(LTO_OPT) $(LTO_EXTRA_VMLINUX) $(LTO_EXTRA_VMLINUX_FINAL) $(LTO_EXTRA_C_FLAGS) $(LTO_EXTRA_LD_FLAGS) $(LTO_EXTRA_LLC_FLAGS) $(LTO_EXTRA_OPT_FLAGS) $(LTO_EXTRA_OPT_DECORATE_FLAGS) $(LTO_EXTRA_OPT_MARKER_FLAGS)  $(LTO_DECORATE) $(LTO_FLAGS) $(PER_FILE_FLAGS) KCFLAGS="$(KCFLAGS)" KAFLAGS="$(KAFLAGS)" $(CORES) $(VERBOSE) $(REDIRECT_BUILD_KERNEL)
 	true
 
 
